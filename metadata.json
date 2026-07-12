@@ -1,0 +1,6 @@
+{
+  "name": "Electronic Marketplace",
+  "description": "A comprehensive electronic marketplace and e-commerce platform with a buyer catalog, search/filtering, shopping cart, checkout, order history, wishlist, and an interactive vendor dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
