@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 type UserRole = 'buyer' | 'seller' | null;
 
@@ -25,53 +26,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('electra_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const restoreSession = async () => {
+      const storedUser = localStorage.getItem('electra_user');
+      const token = localStorage.getItem('electra_token');
+
+      if (storedUser && token) {
+        try {
+          const response = await api.get('/auth/me');
+          setUser(response.data as User);
+        } catch (error) {
+          localStorage.removeItem('electra_user');
+          localStorage.removeItem('electra_token');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    restoreSession();
   }, []);
 
-  // Mock login – in real app, call API
   const login = async (email: string, password: string, role: UserRole) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // In a real app, validate credentials against backend
-    // For demo, we accept any non-empty email/password and assign role
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      name: email.split('@')[0],
-      email,
-      role: role || 'buyer', // default to buyer
-    };
-    setUser(newUser);
-    localStorage.setItem('electra_user', JSON.stringify(newUser));
-    setIsLoading(false);
-    navigate(role === 'seller' ? '/seller' : '/');
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user } = response.data;
+      localStorage.setItem('electra_token', token);
+      localStorage.setItem('electra_user', JSON.stringify(user));
+      setUser(user);
+      setIsLoading(false);
+      navigate(role === 'seller' ? '/seller' : '/');
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
+    }
   };
 
   const signup = async (name: string, email: string, password: string, role: UserRole) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      name,
-      email,
-      role: role || 'buyer',
-    };
-    setUser(newUser);
-    localStorage.setItem('electra_user', JSON.stringify(newUser));
-    setIsLoading(false);
-    navigate(role === 'seller' ? '/seller' : '/');
+    try {
+      const response = await api.post('/auth/register', { name, email, password, role });
+      const { token, user } = response.data;
+      localStorage.setItem('electra_token', token);
+      localStorage.setItem('electra_user', JSON.stringify(user));
+      setUser(user);
+      setIsLoading(false);
+      navigate(role === 'seller' ? '/seller' : '/');
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('electra_user');
+    localStorage.removeItem('electra_token');
     navigate('/');
   };
 

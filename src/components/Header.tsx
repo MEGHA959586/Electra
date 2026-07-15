@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingBag, Heart, User, Store, ArrowLeftRight, Percent, LogOut } from "lucide-react";
+import { Search, ShoppingBag, Heart, User, Store, LogOut, Percent } from "lucide-react"; // ← added Percent
 import { CATEGORIES } from "../data";
 import { useAuth } from "../context/AuthContext";
 
@@ -13,8 +13,6 @@ interface HeaderProps {
   wishlistCount: number;
   currentView: "buyer" | "seller" | "cart" | "profile" | "checkout";
   setView: (view: "buyer" | "seller" | "cart" | "profile" | "checkout") => void;
-  userRole: "buyer" | "seller";
-  setUserRole: (role: "buyer" | "seller") => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,18 +24,17 @@ export const Header: React.FC<HeaderProps> = ({
   wishlistCount,
   currentView,
   setView,
-  userRole,
-  setUserRole
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    setUserRole("buyer");
     setView("buyer");
     navigate("/");
   };
+
+  const userRole = user?.role || "buyer";
 
   return (
     <header id="app-header" className="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white shadow-sm transition-colors duration-200">
@@ -98,73 +95,58 @@ export const Header: React.FC<HeaderProps> = ({
               </>
             ) : (
               <>
-                {/* Role Switcher */}
-                <button
-                  id="role-switch-btn"
-                  onClick={() => {
-                    const nextRole = userRole === "buyer" ? "seller" : "buyer";
-                    setUserRole(nextRole);
-                    setView(nextRole === "seller" ? "seller" : "buyer");
-                    navigate(nextRole === "seller" ? "/seller" : "/");
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-zinc-200 text-[10px] font-bold uppercase tracking-widest text-zinc-700 bg-white hover:bg-zinc-950 hover:text-white hover:border-zinc-950 transition-all cursor-pointer"
-                  title={userRole === "buyer" ? "Switch to Seller Dashboard" : "Switch to Shopping Catalog"}
-                >
-                  <ArrowLeftRight className="h-3 w-3" />
-                  <span className="hidden sm:inline">
-                    {userRole === "buyer" ? "Seller Panel" : "Buyer Mode"}
-                  </span>
-                </button>
-
-                {/* Seller Quick Access */}
-                {userRole === "seller" && currentView !== "seller" && (
+                {/* ✅ Only show Seller Dashboard link if user is a seller */}
+                {userRole === "seller" && (
                   <Link
                     to="/seller"
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-blue-600 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-blue-700 transition-all cursor-pointer"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer ${
+                      currentView === "seller"
+                        ? "bg-zinc-950 text-white border-zinc-950"
+                        : "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                    }`}
                     onClick={() => setView("seller")}
                   >
                     <Store className="h-3 w-3" />
-                    <span>My Store</span>
+                    <span>Dashboard</span>
                   </Link>
                 )}
 
-                {/* Wishlist */}
+                {/* ✅ Buyer-only features: Wishlist & Cart */}
                 {userRole === "buyer" && (
-                  <Link
-                    to="/profile"
-                    className="w-9 h-9 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-white hover:bg-zinc-950 relative transition-all cursor-pointer"
-                    title="View Wishlist"
-                  >
-                    <Heart className="h-4 w-4" />
-                    {wishlistCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-white font-bold text-[8px] flex items-center justify-center shadow-sm">
-                        {wishlistCount}
-                      </span>
-                    )}
-                  </Link>
+                  <>
+                    <Link
+                      to="/profile"
+                      className="w-9 h-9 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-white hover:bg-zinc-950 relative transition-all cursor-pointer"
+                      title="View Wishlist"
+                    >
+                      <Heart className="h-4 w-4" />
+                      {wishlistCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-white font-bold text-[8px] flex items-center justify-center shadow-sm">
+                          {wishlistCount}
+                        </span>
+                      )}
+                    </Link>
+
+                    <Link
+                      to="/cart"
+                      className={`w-9 h-9 rounded-full border flex items-center justify-center relative transition-all cursor-pointer ${
+                        currentView === "cart" 
+                          ? "text-white bg-zinc-950 border-zinc-950" 
+                          : "text-zinc-600 border-zinc-200 hover:text-white hover:bg-zinc-950 hover:border-zinc-950"
+                      }`}
+                      title="View Shopping Cart"
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      {cartCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-white font-bold text-[8px] flex items-center justify-center shadow-sm animate-pulse">
+                          {cartCount}
+                        </span>
+                      )}
+                    </Link>
+                  </>
                 )}
 
-                {/* Cart */}
-                {userRole === "buyer" && (
-                  <Link
-                    to="/cart"
-                    className={`w-9 h-9 rounded-full border flex items-center justify-center relative transition-all cursor-pointer ${
-                      currentView === "cart" 
-                        ? "text-white bg-zinc-950 border-zinc-950" 
-                        : "text-zinc-600 border-zinc-200 hover:text-white hover:bg-zinc-950 hover:border-zinc-950"
-                    }`}
-                    title="View Shopping Cart"
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                    {cartCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-white font-bold text-[8px] flex items-center justify-center shadow-sm animate-pulse">
-                        {cartCount}
-                      </span>
-                    )}
-                  </Link>
-                )}
-
-                {/* Profile */}
+                {/* Profile (visible to all) */}
                 <Link
                   to="/profile"
                   className={`w-9 h-9 rounded-full border flex items-center justify-center relative transition-all cursor-pointer ${

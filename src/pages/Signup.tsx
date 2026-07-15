@@ -7,7 +7,7 @@ export const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
+  const [role, setRole] = useState<'buyer' | 'seller'>('buyer'); // ← added role state
   const [error, setError] = useState('');
   const { signup, isLoading } = useAuth();
 
@@ -27,7 +27,7 @@ export const Signup: React.FC = () => {
       return;
     }
     try {
-      await signup(name, email, password, role);
+      await signup(name, email, password, role); // ← pass role
     } catch (err) {
       setError('Signup failed. Please try again.');
     }
@@ -88,6 +88,8 @@ export const Signup: React.FC = () => {
               required
             />
           </div>
+
+          {/* ✅ Role selection – added */}
           <div>
             <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">I want to sign up as</label>
             <div className="flex gap-4 mt-1">

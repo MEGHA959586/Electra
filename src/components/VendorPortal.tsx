@@ -26,7 +26,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
   const [activeTab, setActiveTab] = useState<SellerTab>("dashboard");
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
 
-  // Form State for Adding Product
   const [title, setTitle] = useState("");
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("Audio");
@@ -36,17 +35,14 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
   const [desc, setDesc] = useState("");
   const [imgUrl, setImgUrl] = useState("");
   
-  // Custom Specs array
   const [specKey1, setSpecKey1] = useState("Model Year");
   const [specVal1, setSpecVal1] = useState("2026");
   const [specKey2, setSpecKey2] = useState("Connectivity");
   const [specVal2, setSpecVal2] = useState("Wireless");
 
-  // Stock editor inline helper state
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [inlineStockVal, setInlineStockVal] = useState<number>(0);
 
-  // Suggested preset placeholder images
   const PRESET_IMAGES = [
     { label: "Modern Earbuds", url: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80" },
     { label: "Tablet PC", url: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600&auto=format&fit=crop&q=80" },
@@ -54,8 +50,13 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
     { label: "Mechanical Mouse", url: "https://images.unsplash.com/photo-1625842268584-8f3290404019?w=600&auto=format&fit=crop&q=80" }
   ];
 
-  // Calculations for Vendor metrics
-  const totalSales = orders.reduce((acc, o) => acc + o.total, 0) + 1289.50; // seeded sales offset
+  // ✅ FIX: safe filter – skip items without product
+  const filteredOrders = orders.filter(order =>
+    order.items.some(item => item?.product?.id)
+  );
+
+  const sellerProductIds = products.map(p => p.id);
+  const totalSales = filteredOrders.reduce((acc, o) => acc + o.total, 0) + 1289.50;
   const lowStockCount = products.filter((p) => p.stock <= 3 && p.stock > 0).length;
   const outOfStockCount = products.filter((p) => p.stock === 0).length;
 
@@ -65,7 +66,7 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
 
     const parsedPrice = parseFloat(price);
     const parsedStock = parseInt(stock, 10);
-    const finalImg = imgUrl.trim() || "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80"; // fallback
+    const finalImg = imgUrl.trim() || "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80";
 
     const newProd: Product = {
       id: `prod-cust-${Date.now()}`,
@@ -90,7 +91,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
 
     onAddProduct(newProd);
 
-    // Reset Form
     setTitle("");
     setBrand("");
     setCategory("Audio");
@@ -115,7 +115,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
   return (
     <div id="vendor-portal-container" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
-      {/* Seller Portal Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900 text-white rounded-none p-6 shadow-none border border-zinc-800">
         <div>
           <span className="text-[9px] bg-zinc-800 text-zinc-400 font-extrabold px-2.5 py-0.5 rounded-none uppercase tracking-widest font-mono">
@@ -128,7 +127,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
           <p className="text-xs text-zinc-400 mt-1">Configure your product stock levels, draft new items, and process incoming buyer orders.</p>
         </div>
 
-        {/* Floating Add trigger */}
         <button
           id="vendor-add-product-btn"
           onClick={() => setIsAddFormOpen(true)}
@@ -139,7 +137,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
         </button>
       </div>
 
-      {/* Tabs list bar */}
       <div className="flex items-center gap-1.5 border-b border-zinc-200 pb-1 shrink-0 overflow-x-auto">
         {[
           { id: "dashboard", label: "Dashboard Summary" },
@@ -161,10 +158,8 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
         ))}
       </div>
 
-      {/* Primary Panels Display */}
       <AnimatePresence mode="wait">
         
-        {/* PANEL 1: DASHBOARD METRICS */}
         {activeTab === "dashboard" && (
           <motion.div
             key="dashboard"
@@ -173,10 +168,7 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              {/* Sales card */}
               <div className="bg-white border border-zinc-200 rounded-none p-5 shadow-none flex items-center gap-4">
                 <div className="h-10 w-10 rounded-none bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
                   <DollarSign className="h-5 w-5" />
@@ -187,18 +179,16 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                 </div>
               </div>
 
-              {/* Volume card */}
               <div className="bg-white border border-zinc-200 rounded-none p-5 shadow-none flex items-center gap-4">
                 <div className="h-10 w-10 rounded-none bg-zinc-50 text-zinc-600 flex items-center justify-center border border-zinc-200 shrink-0">
                   <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Store Order Volume</span>
-                  <p className="text-xl font-bold font-mono text-zinc-950">{orders.length + 8} orders</p>
+                  <p className="text-xl font-bold font-mono text-zinc-950">{filteredOrders.length + 8} orders</p>
                 </div>
               </div>
 
-              {/* Inventory count card */}
               <div className="bg-white border border-zinc-200 rounded-none p-5 shadow-none flex items-center gap-4">
                 <div className="h-10 w-10 rounded-none bg-zinc-50 text-zinc-600 flex items-center justify-center border border-zinc-200 shrink-0">
                   <Package className="h-5 w-5" />
@@ -209,7 +199,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                 </div>
               </div>
 
-              {/* Alerts card */}
               <div className="bg-white border border-zinc-200 rounded-none p-5 shadow-none flex items-center gap-4">
                 <div className={`h-10 w-10 rounded-none flex items-center justify-center shrink-0 ${
                   lowStockCount + outOfStockCount > 0 
@@ -223,13 +212,9 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                   <p className="text-xl font-bold font-mono text-zinc-950">{lowStockCount + outOfStockCount} items</p>
                 </div>
               </div>
-
             </div>
 
-            {/* SVG Sales Trend Graph Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Sales Line Graph Chart */}
               <div className="bg-white border border-zinc-200 rounded-none p-5 shadow-none lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                   <div>
@@ -241,10 +226,8 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                   </span>
                 </div>
 
-                {/* Highly elegant custom SVG graph */}
                 <div className="relative h-60 w-full pt-4">
                   <svg className="w-full h-full" viewBox="0 0 500 200" preserveAspectRatio="none">
-                    {/* Definitions for gradient fills */}
                     <defs>
                       <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#2563eb" stopOpacity="0.10" />
@@ -252,25 +235,21 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                       </linearGradient>
                     </defs>
 
-                    {/* Horizontal grid lines */}
                     <line x1="40" y1="20" x2="480" y2="20" stroke="#f4f4f5" strokeWidth="1" />
                     <line x1="40" y1="70" x2="480" y2="70" stroke="#f4f4f5" strokeWidth="1" />
                     <line x1="40" y1="120" x2="480" y2="120" stroke="#f4f4f5" strokeWidth="1" />
                     <line x1="40" y1="170" x2="480" y2="170" stroke="#e4e4e7" strokeWidth="1.5" />
 
-                    {/* Left Axis labels */}
                     <text x="30" y="24" className="text-[9px] fill-zinc-400 text-right font-mono" textAnchor="end">$2k</text>
                     <text x="30" y="74" className="text-[9px] fill-zinc-400 text-right font-mono" textAnchor="end">$1k</text>
                     <text x="30" y="124" className="text-[9px] fill-zinc-400 text-right font-mono" textAnchor="end">$500</text>
                     <text x="30" y="174" className="text-[9px] fill-zinc-400 text-right font-mono" textAnchor="end">$0</text>
 
-                    {/* SVG Area shaded under trend */}
                     <path
                       d="M 40 170 C 80 140, 110 130, 150 150 C 200 120, 240 70, 280 80 C 330 60, 370 110, 410 40 L 480 20 L 480 170 Z"
                       fill="url(#chartGradient)"
                     />
 
-                    {/* SVG Main Trend Line */}
                     <path
                       d="M 40 170 C 80 140, 110 130, 150 150 C 200 120, 240 70, 280 80 C 330 60, 370 110, 410 40 L 480 20"
                       fill="none"
@@ -279,13 +258,11 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                       strokeLinecap="square"
                     />
 
-                    {/* Data dots */}
                     <circle cx="150" cy="150" r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5" />
                     <circle cx="280" cy="80" r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5" />
                     <circle cx="410" cy="40" r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5" />
                     <circle cx="480" cy="20" r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5" />
 
-                    {/* Bottom axis days labels */}
                     <text x="40" y="192" className="text-[9px] fill-zinc-400 font-bold uppercase tracking-wider font-mono" textAnchor="middle">Mon</text>
                     <text x="113" y="192" className="text-[9px] fill-zinc-400 font-bold uppercase tracking-wider font-mono" textAnchor="middle">Tue</text>
                     <text x="186" y="192" className="text-[9px] fill-zinc-400 font-bold uppercase tracking-wider font-mono" textAnchor="middle">Wed</text>
@@ -297,7 +274,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                 </div>
               </div>
 
-              {/* Low stock indicators sheet */}
               <div className="bg-white border border-zinc-200 rounded-none p-5 shadow-none space-y-4">
                 <div className="border-b border-zinc-100 pb-3">
                   <h3 className="font-display font-bold uppercase tracking-wider text-zinc-950 text-xs">Actionable Alerts</h3>
@@ -331,12 +307,10 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                   )}
                 </div>
               </div>
-
             </div>
           </motion.div>
         )}
 
-        {/* PANEL 2: MANAGE INVENTORY */}
         {activeTab === "products" && (
           <motion.div
             key="products"
@@ -350,7 +324,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
               <span>Edit stock values on-the-fly</span>
             </div>
 
-            {/* Inventory table */}
             <div className="border border-zinc-200 rounded-none overflow-hidden bg-white shadow-none divide-y divide-zinc-200 text-xs">
               {products.map((p) => (
                 <div
@@ -367,9 +340,7 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Inline Stock management, delete controls */}
                   <div className="flex items-center justify-between sm:justify-end gap-5 w-full sm:w-auto">
-                    {/* Stock level indicators */}
                     <div className="flex items-center gap-2">
                       {editingProductId === p.id ? (
                         <div className="flex items-center gap-1.5 border border-zinc-200 rounded-none p-1 bg-zinc-50">
@@ -413,7 +384,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                       )}
                     </div>
 
-                    {/* Delete Product */}
                     <button
                       id={`delete-prod-btn-${p.id}`}
                       onClick={() => onDeleteProduct(p.id)}
@@ -429,7 +399,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
           </motion.div>
         )}
 
-        {/* PANEL 3: RECEIVED ORDERS */}
         {activeTab === "orders" && (
           <motion.div
             key="orders"
@@ -438,14 +407,14 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {orders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <div className="bg-white rounded-none border border-zinc-200 p-12 text-center shadow-none">
                 <Package className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
                 <p className="font-display uppercase tracking-widest font-bold text-zinc-900 text-xs">No incoming orders received yet</p>
                 <p className="text-xs text-zinc-400 mt-1">Check back later or test by placing an order under Buyer Mode!</p>
               </div>
             ) : (
-              orders.map((ord) => (
+              filteredOrders.map((ord) => (
                 <div
                   key={ord.id}
                   id={`vendor-order-card-${ord.id}`}
@@ -465,7 +434,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                       <span className="font-black text-blue-600 text-sm">${ord.total.toFixed(2)}</span>
                     </div>
                     
-                    {/* Status selection widget */}
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-widest font-mono">Shipper Status:</span>
                       <select
@@ -482,7 +450,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Delivery addresses info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50 p-3 rounded-none border border-zinc-200 text-[11px] leading-normal font-mono">
                     <div className="space-y-0.5">
                       <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-widest block">Shipment Consignee</span>
@@ -496,7 +463,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Purchased items lines */}
                   <div className="space-y-1">
                     <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-widest block mb-1 font-mono">Purchased Products list</span>
                     {ord.items.map((item) => (
@@ -531,7 +497,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
               className="bg-white rounded-none w-full max-w-xl p-6 shadow-2xl overflow-hidden text-zinc-850 flex flex-col max-h-[90vh] border border-zinc-200"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Form title */}
               <div className="flex items-center justify-between pb-3 border-b border-zinc-200 shrink-0">
                 <div className="flex items-center gap-1.5 text-zinc-950 font-bold">
                   <ListPlus className="h-5 w-5 text-zinc-700" />
@@ -546,10 +511,8 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                 </button>
               </div>
 
-              {/* Scrollable form body */}
               <form onSubmit={handleCreateProductSubmit} className="flex-1 overflow-y-auto pr-1 py-4 space-y-4 text-xs">
                 
-                {/* Visual tips box */}
                 <div className="bg-zinc-50 border border-zinc-200 p-3 rounded-none flex gap-2 font-mono">
                   <Sparkles className="h-4.5 w-4.5 text-zinc-600 shrink-0 mt-0.5" />
                   <div>
@@ -559,7 +522,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3.5">
-                  {/* Title */}
                   <div className="col-span-2 space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Product Title</label>
                     <input
@@ -572,7 +534,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     />
                   </div>
 
-                  {/* Brand */}
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Brand</label>
                     <input
@@ -585,7 +546,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     />
                   </div>
 
-                  {/* Category select */}
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Category</label>
                     <select
@@ -599,7 +559,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     </select>
                   </div>
 
-                  {/* Unit price */}
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Retail Price ($)</label>
                     <input
@@ -614,7 +573,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     />
                   </div>
 
-                  {/* Original price (compare to) */}
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Compare Price ($)</label>
                     <input
@@ -628,7 +586,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     />
                   </div>
 
-                  {/* Initial stock */}
                   <div className="col-span-2 space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Available Units (Initial Stock)</label>
                     <input
@@ -642,7 +599,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     />
                   </div>
 
-                  {/* Image URL input */}
                   <div className="col-span-2 space-y-2">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono block mb-1">Product Photo URL</label>
                     <input
@@ -653,7 +609,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                       className="block w-full py-2 px-3 border border-zinc-200 rounded-none focus:outline-none focus:ring-1 focus:ring-blue-600 mb-1"
                     />
                     
-                    {/* Presets suggestions */}
                     <div className="space-y-1">
                       <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest block font-mono">Or select a premium stock preset:</span>
                       <div className="flex flex-wrap gap-1.5">
@@ -673,7 +628,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Description */}
                   <div className="col-span-2 space-y-1">
                     <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Detailed Description</label>
                     <textarea
@@ -685,7 +639,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                     />
                   </div>
 
-                  {/* Spec lines */}
                   <div className="col-span-2 space-y-2 border-t border-zinc-200 pt-3">
                     <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono block mb-1">Key Technical Specifications</span>
                     
@@ -720,10 +673,8 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
                       />
                     </div>
                   </div>
-
                 </div>
 
-                {/* Submit triggers */}
                 <button
                   id="submit-new-product"
                   type="submit"
@@ -736,7 +687,6 @@ export const VendorPortal: React.FC<VendorPortalProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };

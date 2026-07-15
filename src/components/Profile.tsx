@@ -1,8 +1,20 @@
-import React, { useState } from "react";
-import { ClipboardList, Heart, MapPin, Calendar, Truck, ArrowLeft, Trash2, ShoppingCart, Check } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ClipboardList, Heart, MapPin, Calendar, Truck, ArrowLeft, Trash2, ShoppingCart, Check, Plus, Edit2, X } from "lucide-react";
 import { Order, Product } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
+
+interface Address {
+  id: string;
+  name: string;
+  email: string;
+  address: string;
+  city: string;
+  zip: string;
+  phone: string;
+  is_default: boolean;
+}
 
 interface ProfileProps {
   orders: Order[];
@@ -12,6 +24,11 @@ interface ProfileProps {
   onViewProduct: (product: Product) => void;
   onReturnToShopping: () => void;
   cartQuantities: { [productId: string]: number };
+  addresses: Address[];
+  onAddAddress: (address: Omit<Address, 'id'>) => void;
+  onUpdateAddress: (id: string, address: Omit<Address, 'id'>) => void;
+  onDeleteAddress: (id: string) => void;
+  onSetDefaultAddress: (id: string) => void;
 }
 
 type ProfileTab = "orders" | "wishlist" | "addresses";
@@ -23,10 +40,26 @@ export const Profile: React.FC<ProfileProps> = ({
   onAddToCart,
   onViewProduct,
   onReturnToShopping,
-  cartQuantities
+  cartQuantities,
+  addresses,
+  onAddAddress,
+  onUpdateAddress,
+  onDeleteAddress,
+  onSetDefaultAddress,
 }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>("orders");
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [newAddress, setNewAddress] = useState<Omit<Address, 'id'>>({
+    name: user?.name || "",
+    email: user?.email || "",
+    address: "",
+    city: "",
+    zip: "",
+    phone: "",
+    is_default: false,
+  });
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -34,6 +67,30 @@ export const Profile: React.FC<ProfileProps> = ({
 
   const displayName = user?.name || "Guest";
   const initials = getInitials(displayName);
+
+  const handleAddAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAddAddress(newAddress);
+    setIsAddingAddress(false);
+    setNewAddress({
+      name: user?.name || "",
+      email: user?.email || "",
+      address: "",
+      city: "",
+      zip: "",
+      phone: "",
+      is_default: false,
+    });
+  };
+
+  const handleEditAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingAddress) {
+      const { id, ...data } = editingAddress;
+      onUpdateAddress(id, data);
+      setEditingAddress(null);
+    }
+  };
 
   return (
     <div id="profile-container" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -107,7 +164,7 @@ export const Profile: React.FC<ProfileProps> = ({
             }`}
           >
             <MapPin className="h-4 w-4" />
-            <span>Saved Addresses</span>
+            <span>Saved Addresses ({addresses.length})</span>
           </button>
         </div>
 
@@ -270,20 +327,249 @@ export const Profile: React.FC<ProfileProps> = ({
                 exit={{ opacity: 0, y: -10 }}
                 className="bg-white rounded-none border border-zinc-200 p-5 shadow-none space-y-4"
               >
-                <h3 className="font-display font-bold text-zinc-900 text-xs uppercase tracking-wider flex items-center gap-1.5 pb-2.5 border-b border-zinc-200">
-                  <MapPin className="h-4 w-4 text-zinc-500" />
-                  <span>Your Delivery Addresses</span>
-                </h3>
-                <div className="p-4 border border-zinc-200 rounded-none bg-zinc-50 flex justify-between items-start font-mono text-[11px]">
-                  <div className="space-y-1 text-xs font-sans">
-                    <span className="bg-zinc-900 text-white text-[8px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-none tracking-widest">Primary Default</span>
-                    <p className="font-display font-bold text-zinc-900 text-sm pt-1.5">{displayName}</p>
-                    <p className="text-zinc-600 font-mono text-[11px]">123 Silicon Boulevard, Apt 4B</p>
-                    <p className="text-zinc-600 font-mono text-[11px]">San Francisco, CA 94107</p>
-                    <p className="text-zinc-600 font-mono text-[11px]">Phone: (555) 019-2834</p>
-                  </div>
-                  <button className="text-[9px] text-zinc-400 hover:text-zinc-950 font-mono font-bold uppercase tracking-widest cursor-pointer">Edit</button>
+                <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
+                  <h3 className="font-display font-bold text-zinc-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-zinc-500" />
+                    <span>Your Delivery Addresses</span>
+                  </h3>
+                  <button
+                    onClick={() => setIsAddingAddress(true)}
+                    className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add Address</span>
+                  </button>
                 </div>
+
+                {addresses.length === 0 && !isAddingAddress ? (
+                  <p className="text-xs text-zinc-400 italic">No saved addresses. Add one below.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {addresses.map((addr) => (
+                      <div key={addr.id} className="border border-zinc-200 rounded-none p-4 bg-zinc-50 flex justify-between items-start">
+                        <div className="space-y-1 text-xs font-sans">
+                          {addr.is_default && (
+                            <span className="bg-zinc-900 text-white text-[8px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-none tracking-widest">Primary Default</span>
+                          )}
+                          <p className="font-display font-bold text-zinc-900 text-sm pt-1.5">{addr.name}</p>
+                          <p className="text-zinc-600 font-mono text-[11px]">{addr.address}</p>
+                          <p className="text-zinc-600 font-mono text-[11px]">{addr.city}, {addr.zip}</p>
+                          <p className="text-zinc-600 font-mono text-[11px]">Phone: {addr.phone}</p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {!addr.is_default && (
+                            <button
+                              onClick={() => onSetDefaultAddress(addr.id)}
+                              className="text-[9px] text-blue-600 hover:text-blue-800 font-mono uppercase tracking-widest"
+                            >
+                              Set Default
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setEditingAddress(addr)}
+                            className="text-[9px] text-zinc-400 hover:text-zinc-950 font-mono uppercase tracking-widest"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => onDeleteAddress(addr.id)}
+                            className="text-[9px] text-red-500 hover:text-red-700 font-mono uppercase tracking-widest"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add Address Form */}
+                {isAddingAddress && (
+                  <form onSubmit={handleAddAddressSubmit} className="border border-zinc-200 p-4 space-y-3 mt-3 bg-white">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-900">Add New Address</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAddress.name}
+                          onChange={(e) => setNewAddress({ ...newAddress, name: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={newAddress.email}
+                          onChange={(e) => setNewAddress({ ...newAddress, email: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Address</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAddress.address}
+                          onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">City</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAddress.city}
+                          onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">ZIP</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAddress.zip}
+                          onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Phone</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAddress.phone}
+                          onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="new-address-default"
+                          checked={newAddress.is_default}
+                          onChange={(e) => setNewAddress({ ...newAddress, is_default: e.target.checked })}
+                          className="accent-blue-600"
+                        />
+                        <label htmlFor="new-address-default" className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider">Set as default</label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-zinc-950 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 transition"
+                      >
+                        Save Address
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingAddress(false)}
+                        className="px-4 py-2 border border-zinc-200 text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Edit Address Form */}
+                {editingAddress && (
+                  <form onSubmit={handleEditAddressSubmit} className="border border-zinc-200 p-4 space-y-3 mt-3 bg-white">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-900">Edit Address</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingAddress.name}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, name: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={editingAddress.email}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, email: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Address</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingAddress.address}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, address: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">City</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingAddress.city}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, city: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">ZIP</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingAddress.zip}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, zip: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Phone</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingAddress.phone}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, phone: e.target.value })}
+                          className="w-full py-1.5 px-2.5 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="edit-address-default"
+                          checked={editingAddress.is_default}
+                          onChange={(e) => setEditingAddress({ ...editingAddress, is_default: e.target.checked })}
+                          className="accent-blue-600"
+                        />
+                        <label htmlFor="edit-address-default" className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider">Set as default</label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-zinc-950 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 transition"
+                      >
+                        Update Address
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingAddress(null)}
+                        className="px-4 py-2 border border-zinc-200 text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

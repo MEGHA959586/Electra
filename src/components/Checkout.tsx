@@ -1,7 +1,19 @@
-import React, { useState } from "react";
-import { CreditCard, CheckCircle2, ShoppingBag, ArrowLeft, Loader2, ClipboardCheck, Calendar, Info } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CreditCard, CheckCircle2, ShoppingBag, ArrowLeft, Loader2, ClipboardCheck, Calendar, Info, MapPin, Plus } from "lucide-react";
 import { CartItem, ShippingAddress, Order } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import api from "../services/api";
+
+interface Address {
+  id: string;
+  name: string;
+  email: string;
+  address: string;
+  city: string;
+  zip: string;
+  phone: string;
+  is_default: boolean;
+}
 
 interface CheckoutProps {
   cartItems: CartItem[];
@@ -10,6 +22,8 @@ interface CheckoutProps {
   discountCode: string;
   onPlaceOrder: (order: Order) => void;
   onCancel: () => void;
+  savedAddresses: Address[];
+  onRefreshAddresses: () => void;
 }
 
 type CheckoutStep = "address" | "payment" | "review" | "processing" | "success";
@@ -20,18 +34,22 @@ export const Checkout: React.FC<CheckoutProps> = ({
   discount,
   discountCode,
   onPlaceOrder,
-  onCancel
+  onCancel,
+  savedAddresses,
+  onRefreshAddresses,
 }) => {
   const [step, setStep] = useState<CheckoutStep>("address");
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [useNewAddress, setUseNewAddress] = useState(false);
 
-  // Address State
+  // Address State (for new address or fallback)
   const [address, setAddress] = useState<ShippingAddress>({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    address: "123 Silicon Boulevard, Apt 4B",
-    city: "San Francisco",
-    zip: "94107",
-    phone: "(555) 019-2834"
+    name: "",
+    email: "",
+    address: "",
+    city: "",
+    zip: "",
+    phone: ""
   });
 
   // Payment State
@@ -41,10 +59,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const [cardName, setCardName] = useState("");
   const [cardType, setCardType] = useState<"visa" | "mastercard" | "unknown">("unknown");
 
-  // Gateway Processing Log Messages
   const [processingStatus, setProcessingStatus] = useState("Connecting to secure payment gateway...");
-
-  // Confirmed Order State
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
   // Financial calculations
@@ -53,27 +68,52 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const shippingFee = taxableSubtotal > 50 || taxableSubtotal === 0 ? 0 : 9.99;
   const grandTotal = taxableSubtotal + estimatedTax + shippingFee;
 
-  // Address submission
+  // Auto-select default address on load
+  useEffect(() => {
+    const defaultAddr = savedAddresses.find(a => a.is_default);
+    if (defaultAddr) {
+      setSelectedAddressId(defaultAddr.id);
+      setUseNewAddress(false);
+    } else if (savedAddresses.length > 0) {
+      setSelectedAddressId(savedAddresses[0].id);
+      setUseNewAddress(false);
+    } else {
+      setUseNewAddress(true);
+    }
+  }, [savedAddresses]);
+
+  // When a saved address is selected, populate the address state
+  useEffect(() => {
+    if (selectedAddressId) {
+      const addr = savedAddresses.find(a => a.id === selectedAddressId);
+      if (addr) {
+        setAddress({
+          name: addr.name,
+          email: addr.email,
+          address: addr.address,
+          city: addr.city,
+          zip: addr.zip,
+          phone: addr.phone,
+        });
+      }
+    }
+  }, [selectedAddressId, savedAddresses]);
+
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!useNewAddress && !selectedAddressId) {
+      alert("Please select a saved address or add a new one.");
+      return;
+    }
     setStep("payment");
   };
 
-  // Payment number formatter & card type finder
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value.replace(/\D/g, "");
     if (val.length > 16) val = val.substring(0, 16);
-
-    // Identify card type
-    if (val.startsWith("4")) {
-      setCardType("visa");
-    } else if (/^5[1-5]/.test(val)) {
-      setCardType("mastercard");
-    } else {
-      setCardType("unknown");
-    }
-
-    // Format with spaces
+    if (val.startsWith("4")) setCardType("visa");
+    else if (/^5[1-5]/.test(val)) setCardType("mastercard");
+    else setCardType("unknown");
     const parts = [];
     for (let i = 0; i < val.length; i += 4) {
       parts.push(val.substring(i, i + 4));
@@ -81,11 +121,9 @@ export const Checkout: React.FC<CheckoutProps> = ({
     setCardNumber(parts.join(" "));
   };
 
-  // Expiration formatter
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value.replace(/\D/g, "");
     if (val.length > 4) val = val.substring(0, 4);
-
     if (val.length >= 2) {
       setCardExpiry(`${val.substring(0, 2)}/${val.substring(2)}`);
     } else {
@@ -93,12 +131,9 @@ export const Checkout: React.FC<CheckoutProps> = ({
     }
   };
 
-  // CVV formatter
   const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, "");
-    if (val.length <= 3) {
-      setCardCvv(val);
-    }
+    if (val.length <= 3) setCardCvv(val);
   };
 
   const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -106,11 +141,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
     setStep("review");
   };
 
-  // Place order trigger
   const handlePlaceOrder = () => {
     setStep("processing");
-
-    // Cycle through mock gateway log steps
     setTimeout(() => {
       setProcessingStatus("Verifying card holder verification protocols...");
       setTimeout(() => {
@@ -118,7 +150,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
         setTimeout(() => {
           setProcessingStatus("Settling secure bank ledger entries...");
           setTimeout(() => {
-            // Generate full Invoice Order
             const newOrder: Order = {
               id: `ORD-${Math.floor(100000 + Math.random() * 900000)}`,
               date: new Date().toLocaleDateString("en-US", {
@@ -138,7 +169,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
               paymentMethod: `Credit Card (ending in ${cardNumber.slice(-4)})`,
               status: "Processing"
             };
-
             setConfirmedOrder(newOrder);
             onPlaceOrder(newOrder);
             setStep("success");
@@ -151,7 +181,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
   return (
     <div id="checkout-wizard-view" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
-      {/* Step Navigator Headers */}
       {step !== "processing" && step !== "success" && (
         <div className="flex justify-between items-center mb-8 border-b border-zinc-200 pb-4">
           <div className="flex items-center gap-1.5">
@@ -168,7 +197,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
             </div>
           </div>
 
-          {/* Stepper bubbles */}
           <div className="flex items-center gap-2">
             {["address", "payment", "review"].map((s, idx) => {
               const isActive = step === s;
@@ -202,10 +230,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
         </div>
       )}
 
-      {/* Step Contents */}
       <AnimatePresence mode="wait">
         
-        {/* STEP 1: SHIPPING ADDRESS */}
         {step === "address" && (
           <motion.form
             key="address-step"
@@ -220,85 +246,119 @@ export const Checkout: React.FC<CheckoutProps> = ({
               <span>Step 1: Shipping Destination</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Full Name */}
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Contact Name</label>
-                <input
-                  type="text"
-                  required
-                  value={address.name}
-                  onChange={(e) => setAddress({ ...address, name: e.target.value })}
-                  className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="e.g. John Doe"
-                />
+            {/* Saved Addresses */}
+            {savedAddresses.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Select a saved address</label>
+                <div className="space-y-1.5">
+                  {savedAddresses.map((addr) => (
+                    <label key={addr.id} className="flex items-start gap-3 p-3 border border-zinc-200 hover:bg-zinc-50 cursor-pointer transition">
+                      <input
+                        type="radio"
+                        name="savedAddress"
+                        checked={selectedAddressId === addr.id && !useNewAddress}
+                        onChange={() => {
+                          setSelectedAddressId(addr.id);
+                          setUseNewAddress(false);
+                        }}
+                        className="mt-1 accent-zinc-950"
+                      />
+                      <div className="text-xs">
+                        <p className="font-bold text-zinc-900">{addr.name}</p>
+                        <p className="text-zinc-600">{addr.address}, {addr.city} {addr.zip}</p>
+                        <p className="text-zinc-600">{addr.phone} • {addr.email}</p>
+                        {addr.is_default && <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">(Default)</span>}
+                      </div>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setUseNewAddress(true)}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add a new address</span>
+                  </button>
+                </div>
               </div>
+            )}
 
-              {/* Email */}
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={address.email}
-                  onChange={(e) => setAddress({ ...address, email: e.target.value })}
-                  className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="e.g. john@example.com"
-                />
+            {/* New Address Form (or fallback) */}
+            {useNewAddress || savedAddresses.length === 0 ? (
+              <div className="border-t border-zinc-100 pt-4">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">
+                  {savedAddresses.length > 0 ? "New Address" : "Enter your shipping address"}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Contact Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={address.name}
+                      onChange={(e) => setAddress({ ...address, name: e.target.value })}
+                      className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      placeholder="e.g. John Doe"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={address.email}
+                      onChange={(e) => setAddress({ ...address, email: e.target.value })}
+                      className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      placeholder="e.g. john@example.com"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Street Address</label>
+                    <input
+                      type="text"
+                      required
+                      value={address.address}
+                      onChange={(e) => setAddress({ ...address, address: e.target.value })}
+                      className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      placeholder="Street and house number, suite or apartment"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">City</label>
+                    <input
+                      type="text"
+                      required
+                      value={address.city}
+                      onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                      className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      placeholder="e.g. San Francisco"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">ZIP / Postal Code</label>
+                    <input
+                      type="text"
+                      required
+                      value={address.zip}
+                      onChange={(e) => setAddress({ ...address, zip: e.target.value })}
+                      className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      placeholder="e.g. 94107"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Phone Number</label>
+                    <input
+                      type="text"
+                      required
+                      value={address.phone}
+                      onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                      className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      placeholder="e.g. (555) 019-2834"
+                    />
+                  </div>
+                </div>
               </div>
-
-              {/* Delivery Address */}
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Street Address</label>
-                <input
-                  type="text"
-                  required
-                  value={address.address}
-                  onChange={(e) => setAddress({ ...address, address: e.target.value })}
-                  className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="Street and house number, suite or apartment"
-                />
-              </div>
-
-              {/* City */}
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">City</label>
-                <input
-                  type="text"
-                  required
-                  value={address.city}
-                  onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                  className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="e.g. San Francisco"
-                />
-              </div>
-
-              {/* Postal ZIP Code */}
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">ZIP / Postal Code</label>
-                <input
-                  type="text"
-                  required
-                  value={address.zip}
-                  onChange={(e) => setAddress({ ...address, zip: e.target.value })}
-                  className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="e.g. 94107"
-                />
-              </div>
-
-              {/* Telephone */}
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Phone Number</label>
-                <input
-                  type="text"
-                  required
-                  value={address.phone}
-                  onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                  className="block w-full py-2 px-3 border border-zinc-200 rounded-none text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="e.g. (555) 019-2834"
-                />
-              </div>
-            </div>
+            ) : null}
 
             <button
               id="address-next"
@@ -310,7 +370,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
           </motion.form>
         )}
 
-        {/* STEP 2: PAYMENT METHOD */}
+        {/* Payment and Review steps remain unchanged – they use the address state */}
         {step === "payment" && (
           <motion.form
             key="payment-step"
@@ -325,7 +385,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
               <span>Step 2: Billing & Credit Card</span>
             </h3>
 
-            {/* Simulated sandbox alert */}
             <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-none text-xs text-zinc-500 flex gap-2 font-mono">
               <Info className="h-4 w-4 shrink-0 text-zinc-700" />
               <div>
@@ -335,7 +394,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Card Number */}
               <div className="md:col-span-2 space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Card Number</label>
@@ -353,8 +411,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                   placeholder="4000 1234 5678 9010"
                 />
               </div>
-
-              {/* Cardholder Name */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Cardholder Name</label>
                 <input
@@ -366,9 +422,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                   placeholder="e.g. JOHN DOE"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
-                {/* Expiration Date */}
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Expiry (MM/YY)</label>
                   <input
@@ -380,8 +434,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                     placeholder="12/28"
                   />
                 </div>
-
-                {/* CVV */}
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">CVV</label>
                   <input
@@ -416,7 +468,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
           </motion.form>
         )}
 
-        {/* STEP 3: ORDER REVIEW */}
         {step === "review" && (
           <motion.div
             key="review-step"
@@ -431,9 +482,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 <span>Step 3: Confirm and Purchase</span>
               </h3>
 
-              {/* Logistics grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-zinc-50 p-4 rounded-none border border-zinc-200 font-mono">
-                {/* Shipping Details summary */}
                 <div className="space-y-1">
                   <span className="font-bold text-zinc-400 uppercase block tracking-wider text-[9px]">Shipping Destination</span>
                   <p className="font-bold text-zinc-900">{address.name}</p>
@@ -441,8 +490,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                   <p className="text-zinc-600">{address.city}, {address.zip}</p>
                   <p className="text-zinc-600">{address.phone}</p>
                 </div>
-
-                {/* Billing Summary */}
                 <div className="space-y-1 border-t md:border-t-0 md:border-l border-zinc-200 pt-3 md:pt-0 md:pl-4">
                   <span className="font-bold text-zinc-400 uppercase block tracking-wider text-[9px]">Payment Details</span>
                   <p className="font-bold text-zinc-900 uppercase">Card ending in •••• {cardNumber.slice(-4)}</p>
@@ -451,7 +498,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 </div>
               </div>
 
-              {/* Items Summary list */}
               <div className="space-y-2">
                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-2 font-mono">Itemized Invoice List</span>
                 <div className="divide-y divide-zinc-150 border border-zinc-200 rounded-none overflow-hidden bg-white text-xs">
@@ -470,7 +516,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 </div>
               </div>
 
-              {/* Final totals panel */}
               <div className="space-y-2.5 text-xs border-t border-zinc-150 pt-4">
                 <div className="flex justify-between text-zinc-500">
                   <span className="font-medium">Subtotal</span>
@@ -500,7 +545,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 </div>
               </div>
 
-              {/* Action grid */}
               <div className="flex gap-2.5">
                 <button
                   id="review-back"
@@ -522,7 +566,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
           </motion.div>
         )}
 
-        {/* SECURE GATEWAY PROCESSING SCREEN */}
         {step === "processing" && (
           <motion.div
             key="processing-step"
@@ -541,7 +584,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
           </motion.div>
         )}
 
-        {/* ORDER SUCCESS PAGE INVOICE */}
         {step === "success" && confirmedOrder && (
           <motion.div
             key="success-step"
@@ -549,7 +591,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            {/* Confirmation Banner Card */}
             <div className="bg-blue-50 border border-blue-200 rounded-none p-6 text-center space-y-3">
               <CheckCircle2 className="h-12 w-12 text-blue-600 mx-auto stroke-[1.5]" />
               <h2 className="font-serif text-2xl font-light text-zinc-950 tracking-tight">Order Placed Successfully</h2>
@@ -558,7 +599,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
               </p>
             </div>
 
-            {/* Printable Invoice Summary Container */}
             <div className="bg-white border border-zinc-200 rounded-none shadow-none p-6 space-y-5 text-xs text-zinc-800 font-mono">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-200">
                 <div>
@@ -571,7 +611,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 </div>
               </div>
 
-              {/* Shipment tracker card */}
               <div className="p-3 bg-[#F8F9FA] border border-zinc-200 rounded-none flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-zinc-600 animate-pulse" />
                 <div>
@@ -580,7 +619,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 </div>
               </div>
 
-              {/* Items invoice lines */}
               <div className="space-y-1.5">
                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-2">Invoice Summary Breakdown</span>
                 {confirmedOrder.items.map((item) => (
@@ -591,7 +629,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 ))}
               </div>
 
-              {/* Totals Summary */}
               <div className="border-t border-zinc-200 pt-3 space-y-1.5 font-medium">
                 <div className="flex justify-between text-zinc-500">
                   <span>Subtotal</span>
@@ -627,7 +664,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
               </div>
             </div>
 
-            {/* Back to Catalog Trigger */}
             <button
               id="return-shopping-success"
               onClick={onCancel}
