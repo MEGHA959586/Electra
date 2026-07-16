@@ -381,38 +381,21 @@ const AppContent = () => {
     navigate("/checkout");
   };
 
-  const handlePlaceOrder = async (newOrder: Order) => {
-    try {
-      await api.post("/orders", {
-        subtotal: newOrder.subtotal,
-        discount: newOrder.discount,
-        tax: newOrder.tax,
-        shipping: newOrder.shipping,
-        total: newOrder.total,
-        shippingAddress: newOrder.shippingAddress,
-        paymentMethod: newOrder.paymentMethod,
-        items: newOrder.items.map(item => ({ 
-          product: { 
-            ...item.product, 
-            id: String(item.product.id) 
-          }, 
-          quantity: item.quantity 
-        }))
-      });
-      await fetchBuyerOrders();
-      if (user?.role === 'seller') {
-        await fetchSellerOrders();
-      }
-      setProducts(prev => prev.map(p => {
-        const item = newOrder.items.find(i => i.product.id === p.id);
-        if (item) return { ...p, stock: Math.max(0, p.stock - item.quantity) };
-        return p;
-      }));
-      setCartItems([]);
-      navigate("/profile");
-    } catch (e) { 
-      console.error('Order placement failed:', e);
+  // ========== FIXED: handlePlaceOrder – NO API call (Checkout already does it) ==========
+  const handlePlaceOrder = (newOrder: Order) => {
+    // Only update local state – the API call was already made in Checkout
+    setOrders(prev => [newOrder, ...prev]);
+    setProducts(prev => prev.map(p => {
+      const item = newOrder.items.find(i => i.product.id === p.id);
+      if (item) return { ...p, stock: Math.max(0, p.stock - item.quantity) };
+      return p;
+    }));
+    setCartItems([]);
+    // Refresh seller orders if the user is a seller (to show new order in dashboard)
+    if (user?.role === 'seller') {
+      fetchSellerOrders();
     }
+    navigate("/profile");
   };
 
   const handleAddCustomProduct = async (productData: Omit<Product, 'id' | 'rating' | 'reviewCount' | 'reviews'>) => {
@@ -450,6 +433,17 @@ const AppContent = () => {
       setSellerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     } catch (error) {
       console.error("Failed to update order status", error);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      await api.delete(`/orders/${orderId}`);
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setSellerOrders(prev => prev.filter(o => o.id !== orderId));
+    } catch (error) {
+      console.error("Failed to cancel order:", error);
+      alert("Failed to cancel order. Please try again.");
     }
   };
 
@@ -507,24 +501,24 @@ const AppContent = () => {
       <div className="flex-1 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-zinc-950 tracking-tight">
+            <h2 className="text-xl font-bold text-stone-950 tracking-tight">
               {selectedCategory === "All" ? "Featured Products" : `${selectedCategory} Devices`}
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5 font-medium">
+            <p className="text-xs text-stone-400 mt-0.5 font-medium">
               Showing {sortedProducts.length} premium electronic products matching criteria.
             </p>
           </div>
           {onlyInStock && <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full">In Stock Only</span>}
         </div>
         {loading ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200 shadow-sm max-w-lg mx-auto">
-            <p className="font-bold text-zinc-900 text-sm">Loading products...</p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-stone-200 shadow-sm max-w-lg mx-auto">
+            <p className="font-bold text-stone-900 text-sm">Loading products...</p>
           </div>
         ) : sortedProducts.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200 shadow-sm max-w-lg mx-auto">
-            <Filter className="h-5 w-5 text-zinc-400 mx-auto mb-3" />
-            <p className="font-bold text-zinc-900 text-sm">No Products Found</p>
-            <button onClick={handleClearFilters} className="mt-4 px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-semibold hover:bg-zinc-800">Reset Filters</button>
+          <div className="text-center py-20 bg-white rounded-2xl border border-stone-200 shadow-sm max-w-lg mx-auto">
+            <Filter className="h-5 w-5 text-stone-400 mx-auto mb-3" />
+            <p className="font-bold text-stone-900 text-sm">No Products Found</p>
+            <button onClick={handleClearFilters} className="mt-4 px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-semibold hover:bg-stone-800">Reset Filters</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -562,8 +556,8 @@ const AppContent = () => {
   ];
 
   return (
-    <div className="relative min-h-screen bg-zinc-50 text-zinc-900 transition-colors duration-300 flex flex-col font-sans">
-      <div className="absolute inset-0 -z-10 pointer-events-none bg-zinc-50" />
+    <div className="relative min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 flex flex-col font-sans">
+      <div className="absolute inset-0 -z-10 pointer-events-none bg-stone-50" />
       <Header
         currentCategory={selectedCategory}
         setCategory={setCategory}
@@ -579,7 +573,7 @@ const AppContent = () => {
           <Route path="/" element={
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
               {/* HERO */}
-              <div className="relative w-full border border-zinc-200 bg-white/40 rounded-none overflow-hidden shadow-none">
+              <div className="relative w-full border border-stone-200 bg-white/40 rounded-none overflow-hidden shadow-none">
                 <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
                   <img ref={laptopRef} src="/laptop_10fps/ezgif-frame-001.jpg" alt="Laptop" loading="eager" decoding="async" className="w-full h-full object-cover" onError={(e) => { console.error('Laptop image error:', e); (e.target as HTMLImageElement).style.display = 'none'; }} />
                   <div className="absolute inset-0 bg-white/20 backdrop-blur-[0.5px]"></div>
@@ -588,52 +582,52 @@ const AppContent = () => {
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: false, amount: 0.2 }}
-                  transition={{ duration: 1.6, ease: "easeOut" }} /* was 1.2 → 1.6 */
+                  transition={{ duration: 1.6, ease: "easeOut" }}
                   className="relative z-10 max-w-2xl p-8 md:p-12 flex flex-col justify-center min-h-[300px] md:min-h-[400px]"
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-3 font-mono">Product Spotlight — 2026</p>
-                  <h1 className="font-serif text-4xl md:text-6xl font-light leading-[1.1] mb-6 tracking-tight text-zinc-950">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600 mb-3 font-mono">Product Spotlight — 2026</p>
+                  <h1 className="font-serif text-4xl md:text-6xl font-light leading-[1.1] mb-6 tracking-tight text-stone-950">
                     The New <br/><span className="font-black italic font-serif">Standard</span> <br/>in Precision.
                   </h1>
-                  <p className="text-zinc-700 text-xs md:text-sm leading-relaxed max-w-md mb-8 font-sans">
+                  <p className="text-stone-700 text-xs md:text-sm leading-relaxed max-w-md mb-8 font-sans">
                     Engineered for clinical acoustic perfection and raw computing power. Our custom-curated line of premium audio, ultra-thin silicon notebooks, and custom peripherals define the new standard of modern electronic craftsmanship.
                   </p>
                   <div className="flex flex-wrap items-center gap-6">
-                    <button onClick={() => { if (!user) navigate("/login"); else { setCategory("All"); navigate("/catalog"); } }} className="bg-zinc-950 text-white border border-zinc-950 px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 hover:border-blue-600 transition-all cursor-pointer rounded-none">Shop now</button>
+                    <button onClick={() => { if (!user) navigate("/login"); else { setCategory("All"); navigate("/catalog"); } }} className="bg-stone-900 text-white border border-stone-900 px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 hover:border-blue-900 transition-all cursor-pointer rounded-none">Shop now</button>
                     <div className="flex items-center gap-2">
                       <div className="flex -space-x-1.5">
-                        <div className="w-7 h-7 rounded-full border border-white bg-zinc-200"></div>
-                        <div className="w-7 h-7 rounded-full border border-white bg-zinc-300"></div>
-                        <div className="w-7 h-7 rounded-full border border-white bg-zinc-400"></div>
+                        <div className="w-7 h-7 rounded-full border border-white bg-stone-200"></div>
+                        <div className="w-7 h-7 rounded-full border border-white bg-stone-300"></div>
+                        <div className="w-7 h-7 rounded-full border border-white bg-stone-400"></div>
                       </div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 ml-1">+14k Reviews</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-stone-600 ml-1">+14k Reviews</span>
                     </div>
                   </div>
-                  <div className="border-t border-zinc-200/50 pt-6 mt-8">
+                  <div className="border-t border-stone-200/50 pt-6 mt-8">
                     <div className="flex justify-between items-end">
-                      <div><div className="text-[9px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Release Edition</div><div className="text-sm font-mono text-zinc-800 font-bold">ED. 09 // JULY 2026</div></div>
-                      <div className="text-right"><div className="text-[9px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Availability</div><div className="text-sm font-mono text-green-600 font-bold">IN STOCK & VERIFIED</div></div>
+                      <div><div className="text-[9px] uppercase tracking-widest font-bold text-stone-500 mb-1">Release Edition</div><div className="text-sm font-mono text-stone-800 font-bold">ED. 09 // JULY 2026</div></div>
+                      <div className="text-right"><div className="text-[9px] uppercase tracking-widest font-bold text-stone-500 mb-1">Availability</div><div className="text-sm font-mono text-emerald-600 font-bold">IN STOCK & VERIFIED</div></div>
                     </div>
                   </div>
                 </motion.div>
               </div>
 
               {/* WHY CHOOSE */}
-              <div className="w-full mb-10 py-10 bg-white border border-zinc-200">
+              <div className="w-full mb-10 py-10 bg-white border border-stone-200">
                 <div className="text-center mb-8">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 font-mono">Why Choose ELECTRA</span>
-                  <h2 className="font-serif text-2xl md:text-3xl font-light text-zinc-950 mt-1">Engineered for <span className="font-black italic">Excellence</span></h2>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600 font-mono">Why Choose ELECTRA</span>
+                  <h2 className="font-serif text-2xl md:text-3xl font-light text-stone-950 mt-1">Engineered for <span className="font-black italic">Excellence</span></h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto px-4">
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 1.2, ease: "easeOut" }} /* was 0.8 → 1.2 */
+                    transition={{ duration: 1.2, ease: "easeOut" }}
                     className="flex flex-col items-center text-center p-4"
                   >
-                    <div className="h-14 w-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3"><Truck className="h-7 w-7" /></div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">Free Shipping</h4><p className="text-[10px] text-zinc-500 mt-1">On all orders over $50</p>
+                    <div className="h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3"><Truck className="h-7 w-7" /></div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Free Shipping</h4><p className="text-[10px] text-stone-500 mt-1">On all orders over $50</p>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, x: 30 }}
@@ -642,8 +636,8 @@ const AppContent = () => {
                     transition={{ duration: 1.2, ease: "easeOut" }}
                     className="flex flex-col items-center text-center p-4"
                   >
-                    <div className="h-14 w-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3"><RefreshCw className="h-7 w-7" /></div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">30-Day Returns</h4><p className="text-[10px] text-zinc-500 mt-1">Hassle‑free & immediate</p>
+                    <div className="h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3"><RefreshCw className="h-7 w-7" /></div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">30-Day Returns</h4><p className="text-[10px] text-stone-500 mt-1">Hassle‑free & immediate</p>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
@@ -652,8 +646,8 @@ const AppContent = () => {
                     transition={{ duration: 1.2, ease: "easeOut" }}
                     className="flex flex-col items-center text-center p-4"
                   >
-                    <div className="h-14 w-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3"><ShieldCheck className="h-7 w-7" /></div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">1‑Year Warranty</h4><p className="text-[10px] text-zinc-500 mt-1">Full coverage on all devices</p>
+                    <div className="h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3"><ShieldCheck className="h-7 w-7" /></div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">1‑Year Warranty</h4><p className="text-[10px] text-stone-500 mt-1">Full coverage on all devices</p>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, x: 30 }}
@@ -662,8 +656,8 @@ const AppContent = () => {
                     transition={{ duration: 1.2, ease: "easeOut" }}
                     className="flex flex-col items-center text-center p-4"
                   >
-                    <div className="h-14 w-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3"><CreditCard className="h-7 w-7" /></div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">Secure Payment</h4><p className="text-[10px] text-zinc-500 mt-1">256‑bit encrypted checkout</p>
+                    <div className="h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3"><CreditCard className="h-7 w-7" /></div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Secure Payment</h4><p className="text-[10px] text-stone-500 mt-1">256‑bit encrypted checkout</p>
                   </motion.div>
                 </div>
                 <div className="flex flex-wrap justify-center gap-6 mt-8">
@@ -671,9 +665,9 @@ const AppContent = () => {
                     initial={{ opacity: 0, x: -40 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 1.3, ease: "easeOut" }} /* was 0.9 → 1.3 */
+                    transition={{ duration: 1.3, ease: "easeOut" }}
                     onClick={() => { if (!user) navigate("/login"); else { setCategory("All"); navigate("/catalog"); } }}
-                    className="px-6 py-3 bg-zinc-950 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 border border-zinc-950 hover:border-blue-600 transition-all cursor-pointer"
+                    className="px-6 py-3 bg-stone-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 border border-stone-900 hover:border-blue-900 transition-all cursor-pointer"
                   >
                     Explore Catalog
                   </motion.button>
@@ -683,7 +677,7 @@ const AppContent = () => {
                     viewport={{ once: false, amount: 0.2 }}
                     transition={{ duration: 1.3, ease: "easeOut" }}
                     onClick={() => { if (!user) navigate("/login"); else { setCategory("Audio"); navigate("/catalog"); } }}
-                    className="px-6 py-3 bg-white text-zinc-950 text-[10px] font-bold uppercase tracking-widest border border-zinc-200 hover:bg-zinc-50 transition-all cursor-pointer"
+                    className="px-6 py-3 bg-white text-stone-950 text-[10px] font-bold uppercase tracking-widest border border-stone-200 hover:bg-stone-50 transition-all cursor-pointer"
                   >
                     Shop Audio Deals
                   </motion.button>
@@ -691,7 +685,7 @@ const AppContent = () => {
               </div>
 
               {/* AIRPODS BANNER */}
-              <div className="relative w-full h-[240px] md:h-[280px] border border-zinc-200 bg-black overflow-hidden flex items-center shadow-none">
+              <div className="relative w-full h-[240px] md:h-[280px] border border-stone-200 bg-black overflow-hidden flex items-center shadow-none">
                 <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
                   <img ref={airpodsRef} src="/airpod_10fps/ezgif-frame-001.jpg" alt="AirPods" loading="eager" decoding="async" className="w-full h-full object-cover" onError={(e) => { console.error('AirPods image error:', e); (e.target as HTMLImageElement).style.display = 'none'; }} />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/10 to-transparent"></div>
@@ -700,50 +694,50 @@ const AppContent = () => {
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: false, amount: 0.2 }}
-                  transition={{ duration: 1.6, ease: "easeOut" }} /* was 1.2 → 1.6 */
+                  transition={{ duration: 1.6, ease: "easeOut" }}
                   className="relative z-10 max-w-md md:ml-12 p-6 text-white"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mb-2 block font-mono">Acoustic Precision</span>
-                  <h2 className="font-serif text-2xl md:text-3xl font-light leading-tight mb-3 text-white">AirPods Series. <br/><span className="font-black italic font-serif text-blue-300">Pure Acoustic Art.</span></h2>
-                  <p className="text-zinc-300 text-xs leading-relaxed mb-4">Featuring active noise cancellation and personalized spatial mapping. Experience sound engineered with medical-grade acoustic clarity.</p>
-                  <button onClick={() => { if (!user) navigate("/login"); else { setCategory("Audio"); navigate("/catalog"); } }} className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-blue-400 hover:text-white transition-all font-mono border-b border-blue-400 pb-0.5 cursor-pointer">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-400 mb-2 block font-mono">Acoustic Precision</span>
+                  <h2 className="font-serif text-2xl md:text-3xl font-light leading-tight mb-3 text-white">AirPods Series. <br/><span className="font-black italic font-serif text-amber-300">Pure Acoustic Art.</span></h2>
+                  <p className="text-stone-300 text-xs leading-relaxed mb-4">Featuring active noise cancellation and personalized spatial mapping. Experience sound engineered with medical-grade acoustic clarity.</p>
+                  <button onClick={() => { if (!user) navigate("/login"); else { setCategory("Audio"); navigate("/catalog"); } }} className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400 hover:text-white transition-all font-mono border-b border-amber-400 pb-0.5 cursor-pointer">
                     <span>Shop AirPods Series</span><ArrowRight className="h-3 w-3" />
                   </button>
                 </motion.div>
               </div>
 
-              {/* SHOP OUR COLLECTION – CAROUSEL (4 per slide, 7s, no wrap) */}
+              {/* SHOP OUR COLLECTION – CAROUSEL */}
               <motion.div
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: false, amount: 0.1 }}
                 variants={{
                   hidden: { opacity: 0 },
-                  visible: { opacity: 1, transition: { duration: 0.8 } } /* was 0.6 → 0.8 */
+                  visible: { opacity: 1, transition: { duration: 0.8 } }
                 }}
-                className="w-full py-12 bg-white border border-zinc-200"
+                className="w-full py-12 bg-white border border-stone-200"
               >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 1.0, ease: "easeOut" }} /* was 0.7 → 1.0 */
+                    transition={{ duration: 1.0, ease: "easeOut" }}
                     className="mb-8"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 font-mono">Shop Our Collection</span>
-                    <h2 className="font-serif text-3xl md:text-4xl font-light text-zinc-950 mt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600 font-mono">Shop Our Collection</span>
+                    <h2 className="font-serif text-3xl md:text-4xl font-light text-stone-950 mt-1">
                       Premium <span className="font-black italic">Electronics</span>
                     </h2>
-                    <div className="h-0.5 w-16 bg-blue-600 mt-2"></div>
+                    <div className="h-0.5 w-16 bg-amber-600 mt-2"></div>
                   </motion.div>
 
                   {loading ? (
                     <div className="text-center py-12">
-                      <p className="font-bold text-zinc-900 text-sm">Loading products...</p>
+                      <p className="font-bold text-stone-900 text-sm">Loading products...</p>
                     </div>
                   ) : slides.length === 0 ? (
-                    <p className="text-center text-zinc-500">No products available.</p>
+                    <p className="text-center text-stone-500">No products available.</p>
                   ) : (
                     <>
                       <div className="relative overflow-hidden">
@@ -783,7 +777,7 @@ const AppContent = () => {
                             key={idx}
                             onClick={() => goToSlide(idx)}
                             className={`h-2 w-2 rounded-full transition-all ${
-                              currentSlide === idx ? "bg-blue-600 w-6" : "bg-zinc-300"
+                              currentSlide === idx ? "bg-amber-600 w-6" : "bg-stone-300"
                             }`}
                             aria-label={`Go to slide ${idx + 1}`}
                           />
@@ -796,7 +790,7 @@ const AppContent = () => {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 0.9, ease: "easeOut", delay: 0.4 }} /* was 0.6/0.3 → 0.9/0.4 */
+                    transition={{ duration: 0.9, ease: "easeOut", delay: 0.4 }}
                     className="flex justify-center mt-10"
                   >
                     <button
@@ -804,7 +798,7 @@ const AppContent = () => {
                         if (!user) navigate("/login");
                         else navigate("/catalog");
                       }}
-                      className="px-8 py-3 bg-zinc-950 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 border border-zinc-950 hover:border-blue-600 transition-all cursor-pointer"
+                      className="px-8 py-3 bg-stone-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 border border-stone-900 hover:border-blue-900 transition-all cursor-pointer"
                     >
                       View All Products
                     </button>
@@ -819,92 +813,166 @@ const AppContent = () => {
                 </div>
               </div>
 
-              {/* CONTACT, FAQ, BLOG */}
-              <div ref={contactRef} className="scroll-mt-20 w-full py-12 bg-white border border-zinc-200">
+              {/* CONTACT */}
+              <div ref={contactRef} className="scroll-mt-20 w-full py-12 bg-white border border-stone-200">
                 <div className="max-w-5xl mx-auto px-4">
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 1.0, ease: "easeOut" }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
                     className="mb-8"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 font-mono">Get in Touch</span>
-                    <h2 className="font-serif text-3xl md:text-4xl font-light text-zinc-950 mt-1">Contact Us</h2>
-                    <div className="h-0.5 w-16 bg-blue-600 mt-2"></div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600 font-mono">Get in Touch</span>
+                    <h2 className="font-serif text-3xl md:text-4xl font-light text-stone-950 mt-1">Contact Us</h2>
+                    <div className="h-0.5 w-16 bg-amber-600 mt-2"></div>
                   </motion.div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                      <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-blue-600 mt-0.5" /><div><h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">Address</h4><p className="text-sm text-zinc-600">123 Silicon Boulevard, Suite 100<br />San Francisco, CA 94107</p></div></div>
-                      <div className="flex items-start gap-3"><Phone className="h-5 w-5 text-blue-600 mt-0.5" /><div><h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">Phone</h4><p className="text-sm text-zinc-600">+1 (555) 019-2834</p></div></div>
-                      <div className="flex items-start gap-3"><Mail className="h-5 w-5 text-blue-600 mt-0.5" /><div><h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">Email</h4><p className="text-sm text-zinc-600">support@electra.com</p></div></div>
-                    </div>
-                    <div className="bg-zinc-50 p-6 border border-zinc-200">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 mb-4">Send a message</h4>
+                    <motion.div
+                      className="space-y-6"
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: false, amount: 0.2 }}
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: {
+                          opacity: 1,
+                          transition: { staggerChildren: 0.3, delayChildren: 0.2 }
+                        }
+                      }}
+                    >
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 15 },
+                          visible: { opacity: 1, y: 0, transition: { duration: 1.0, ease: "easeOut" } }
+                        }}
+                        className="flex items-start gap-3"
+                      >
+                        <MapPin className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Address</h4><p className="text-sm text-stone-600">123 Silicon Boulevard, Suite 100<br />San Francisco, CA 94107</p></div>
+                      </motion.div>
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 15 },
+                          visible: { opacity: 1, y: 0, transition: { duration: 1.0, ease: "easeOut" } }
+                        }}
+                        className="flex items-start gap-3"
+                      >
+                        <Phone className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Phone</h4><p className="text-sm text-stone-600">+1 (555) 019-2834</p></div>
+                      </motion.div>
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 15 },
+                          visible: { opacity: 1, y: 0, transition: { duration: 1.0, ease: "easeOut" } }
+                        }}
+                        className="flex items-start gap-3"
+                      >
+                        <Mail className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Email</h4><p className="text-sm text-stone-600">support@electra.com</p></div>
+                      </motion.div>
+                    </motion.div>
+
+                    {/* Contact form */}
+                    <div className="bg-stone-50 p-6 border border-stone-200">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900 mb-4">Send a message</h4>
                       <form onSubmit={(e) => { e.preventDefault(); alert("Message sent! (demo)"); }} className="space-y-3">
-                        <input type="text" placeholder="Your Name" className="w-full py-2 px-3 border border-zinc-200 rounded-none text-sm focus:outline-none focus:ring-1 focus:ring-blue-600" required />
-                        <input type="email" placeholder="Email" className="w-full py-2 px-3 border border-zinc-200 rounded-none text-sm focus:outline-none focus:ring-1 focus:ring-blue-600" required />
-                        <textarea rows={3} placeholder="Message" className="w-full py-2 px-3 border border-zinc-200 rounded-none text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 resize-none" required />
-                        <button type="submit" className="w-full bg-zinc-950 text-white py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 transition border border-zinc-950 hover:border-blue-600 flex items-center justify-center gap-2"><Send className="h-3.5 w-3.5" /> Send</button>
+                        <input type="text" placeholder="Your Name" className="w-full py-2 px-3 border border-stone-200 rounded-none text-sm focus:outline-none focus:ring-1 focus:ring-amber-600" required />
+                        <input type="email" placeholder="Email" className="w-full py-2 px-3 border border-stone-200 rounded-none text-sm focus:outline-none focus:ring-1 focus:ring-amber-600" required />
+                        <textarea rows={3} placeholder="Message" className="w-full py-2 px-3 border border-stone-200 rounded-none text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 resize-none" required />
+                        <button type="submit" className="w-full bg-stone-900 text-white py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 transition border border-stone-900 hover:border-blue-900 flex items-center justify-center gap-2"><Send className="h-3.5 w-3.5" /> Send</button>
                       </form>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div ref={faqRef} className="scroll-mt-20 w-full py-12 bg-white border border-zinc-200">
+              {/* FAQ */}
+              <div ref={faqRef} className="scroll-mt-20 w-full py-12 bg-white border border-stone-200">
                 <div className="max-w-3xl mx-auto px-4">
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 1.0, ease: "easeOut" }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
                     className="mb-8"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 font-mono">Answers</span>
-                    <h2 className="font-serif text-3xl md:text-4xl font-light text-zinc-950 mt-1">Frequently Asked Questions</h2>
-                    <div className="h-0.5 w-16 bg-blue-600 mt-2"></div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600 font-mono">Answers</span>
+                    <h2 className="font-serif text-3xl md:text-4xl font-light text-stone-950 mt-1">Frequently Asked Questions</h2>
+                    <div className="h-0.5 w-16 bg-amber-600 mt-2"></div>
                   </motion.div>
                   <div className="space-y-3">
                     {faqs.map((faq, idx) => (
-                      <div key={idx} className="border border-zinc-200 bg-white">
-                        <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-zinc-900 hover:bg-zinc-50 transition">
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: false, amount: 0.2 }}
+                        transition={{ duration: 1.2, delay: idx * 0.15 }}
+                        className="border border-stone-200 bg-white"
+                      >
+                        <button
+                          onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                          className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-stone-900 hover:bg-stone-50 transition"
+                        >
                           <span>{faq.q}</span>
-                          {openFaq === idx ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+                          {openFaq === idx ? (
+                            <ChevronUp className="h-4 w-4 text-stone-500 transition-transform duration-300" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-stone-500 transition-transform duration-300" />
+                          )}
                         </button>
-                        {openFaq === idx && <div className="px-5 pb-5 text-sm text-zinc-600 leading-relaxed border-t border-zinc-100 pt-3">{faq.a}</div>}
-                      </div>
+                        <motion.div
+                          initial={false}
+                          animate={{ height: openFaq === idx ? "auto" : 0, opacity: openFaq === idx ? 1 : 0 }}
+                          transition={{ duration: 0.6, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-5 pb-5 text-sm text-stone-600 leading-relaxed border-t border-stone-100 pt-3">
+                            {faq.a}
+                          </div>
+                        </motion.div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div ref={blogRef} className="scroll-mt-20 w-full py-12 bg-white border border-zinc-200">
+              {/* BLOG */}
+              <div ref={blogRef} className="scroll-mt-20 w-full py-12 bg-white border border-stone-200">
                 <div className="max-w-5xl mx-auto px-4">
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: false, amount: 0.2 }}
-                    transition={{ duration: 1.0, ease: "easeOut" }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
                     className="mb-8"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 font-mono">Stories & Insights</span>
-                    <h2 className="font-serif text-3xl md:text-4xl font-light text-zinc-950 mt-1">Latest from the Blog</h2>
-                    <div className="h-0.5 w-16 bg-blue-600 mt-2"></div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600 font-mono">Stories & Insights</span>
+                    <h2 className="font-serif text-3xl md:text-4xl font-light text-stone-950 mt-1">Latest from the Blog</h2>
+                    <div className="h-0.5 w-16 bg-amber-600 mt-2"></div>
                   </motion.div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {blogPosts.map((post, idx) => (
-                      <div key={idx} className="bg-white border border-zinc-200 overflow-hidden group">
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                        viewport={{ once: false, amount: 0.2 }}
+                        transition={{ duration: 1.2, delay: idx * 0.15 }}
+                        whileHover={{ scale: 1.02, y: -5, transition: { duration: 0.3 } }}
+                        className="bg-white border border-stone-200 overflow-hidden group shadow-sm hover:shadow-lg transition-shadow duration-300"
+                      >
                         <img src={post.image} alt={post.title} className="w-full h-40 object-cover group-hover:scale-105 transition duration-500" />
                         <div className="p-4 space-y-2">
-                          <h3 className="font-display font-bold text-zinc-900 text-sm hover:text-blue-600 cursor-pointer">{post.title}</h3>
-                          <p className="text-xs text-zinc-500">{post.excerpt}</p>
-                          <div className="flex items-center gap-4 text-[10px] text-zinc-400 font-mono">
+                          <h3 className="font-display font-bold text-stone-900 text-sm hover:text-amber-600 cursor-pointer">{post.title}</h3>
+                          <p className="text-xs text-stone-500">{post.excerpt}</p>
+                          <div className="flex items-center gap-4 text-[10px] text-stone-400 font-mono">
                             <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.date}</span>
                             <span className="flex items-center gap-1"><User className="h-3 w-3" /> {post.author}</span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -945,6 +1013,7 @@ const AppContent = () => {
                 onUpdateAddress={handleUpdateAddress}
                 onDeleteAddress={handleDeleteAddress}
                 onSetDefaultAddress={handleSetDefaultAddress}
+                onCancelOrder={handleCancelOrder}
               />
             </RequireAuth>
           } />
@@ -959,13 +1028,13 @@ const AppContent = () => {
           <Route path="/signup" element={<Signup />} />
         </Routes>
       </main>
-      <footer className="bg-zinc-900 border-t border-zinc-800 pt-12 pb-6 text-zinc-400">
+      <footer className="bg-stone-950 border-t border-stone-800 pt-12 pb-6 text-stone-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-zinc-800">
-            <div><span className="font-serif text-2xl font-black italic tracking-tighter uppercase text-white">ELECTRA<span className="text-blue-500">.</span></span><p className="text-xs mt-3 leading-relaxed max-w-xs">Premium electronics marketplace. Curated for quality, engineered for excellence.</p><div className="flex gap-3 mt-4"><button className="text-zinc-400 hover:text-white transition" aria-label="Facebook"><Facebook className="h-4 w-4" /></button><button className="text-zinc-400 hover:text-white transition" aria-label="Twitter"><Twitter className="h-4 w-4" /></button><button className="text-zinc-400 hover:text-white transition" aria-label="Instagram"><Instagram className="h-4 w-4" /></button><button className="text-zinc-400 hover:text-white transition" aria-label="Youtube"><Youtube className="h-4 w-4" /></button></div></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-stone-800">
+            <div><span className="font-serif text-2xl font-black italic tracking-tighter uppercase text-white">ELECTRA<span className="text-amber-500">.</span></span><p className="text-xs mt-3 leading-relaxed max-w-xs">Premium electronics marketplace. Curated for quality, engineered for excellence.</p><div className="flex gap-3 mt-4"><button className="text-stone-400 hover:text-white transition" aria-label="Facebook"><Facebook className="h-4 w-4" /></button><button className="text-stone-400 hover:text-white transition" aria-label="Twitter"><Twitter className="h-4 w-4" /></button><button className="text-stone-400 hover:text-white transition" aria-label="Instagram"><Instagram className="h-4 w-4" /></button><button className="text-stone-400 hover:text-white transition" aria-label="Youtube"><Youtube className="h-4 w-4" /></button></div></div>
             <div><h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">Quick Links</h4><ul className="space-y-2 text-xs"><li><button onClick={() => scrollTo(aboutRef)} className="hover:text-white transition">About Us</button></li><li><button onClick={() => scrollTo(contactRef)} className="hover:text-white transition">Contact</button></li><li><button onClick={() => scrollTo(faqRef)} className="hover:text-white transition">FAQ</button></li><li><button onClick={() => scrollTo(blogRef)} className="hover:text-white transition">Blog</button></li></ul></div>
             <div><h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">Customer Service</h4><ul className="space-y-2 text-xs"><li><button onClick={() => scrollTo(faqRef)} className="hover:text-white transition">Returns Policy</button></li><li><button onClick={() => scrollTo(faqRef)} className="hover:text-white transition">Shipping Info</button></li><li><button onClick={() => scrollTo(faqRef)} className="hover:text-white transition">Warranty</button></li><li><button onClick={() => scrollTo(faqRef)} className="hover:text-white transition">Track Order</button></li></ul></div>
-            <div><h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">Subscribe</h4><p className="text-xs mb-3">Get the latest deals and updates.</p><div className="flex"><input type="email" placeholder="Your email" className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 text-xs rounded-l-none focus:outline-none focus:ring-1 focus:ring-blue-600 placeholder-zinc-500" /><button className="px-4 py-2 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition flex items-center gap-1"><Send className="h-3 w-3" /><span>Subscribe</span></button></div></div>
+            <div><h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">Subscribe</h4><p className="text-xs mb-3">Get the latest deals and updates.</p><div className="flex"><input type="email" placeholder="Your email" className="flex-1 px-3 py-2 bg-stone-800 border border-stone-700 text-xs rounded-l-none focus:outline-none focus:ring-1 focus:ring-amber-600 placeholder-stone-500" /><button className="px-4 py-2 bg-amber-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-amber-700 transition flex items-center gap-1"><Send className="h-3 w-3" /><span>Subscribe</span></button></div></div>
           </div>
           <div className="flex flex-col md:flex-row justify-between items-center text-xs pt-6">
             <span>&copy; 2026 ElectroMart. All rights reserved.</span>

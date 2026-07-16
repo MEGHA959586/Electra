@@ -68,7 +68,6 @@ exports.getMyOrders = async (req, res) => {
         JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = ?
       `, [order.id]);
-      // Ensure product object is fully formed
       order.items = items.map((row) => ({
         quantity: row.quantity,
         price: row.price,
@@ -81,12 +80,12 @@ exports.getMyOrders = async (req, res) => {
           rating: Number(row.rating || 0),
           reviewCount: Number(row.review_count || 0),
           image: row.image,
-          gallery: [],
+          gallery: row.gallery ? JSON.parse(row.gallery) : [],
           category: row.category,
           brand: row.brand,
           stock: Number(row.stock),
-          specs: {},
-          reviews: [],
+          specs: row.specs ? JSON.parse(row.specs) : {},
+          reviews: row.reviews ? JSON.parse(row.reviews) : [],
           seller_id: row.seller_id ? String(row.seller_id) : null,
         }
       }));
@@ -102,7 +101,6 @@ exports.getMyOrders = async (req, res) => {
 exports.getSellerOrders = async (req, res) => {
   if (req.user.role !== 'seller') return res.status(403).json({ msg: 'Access denied' });
   try {
-    // Get orders that contain at least one product belonging to this seller
     const [orders] = await db.query(`
       SELECT DISTINCT o.*
       FROM orders o
@@ -113,7 +111,6 @@ exports.getSellerOrders = async (req, res) => {
     `, [req.user.id]);
 
     for (const order of orders) {
-      // Fetch items with FULL product details
       const [items] = await db.query(`
         SELECT 
           oi.id AS order_item_id,
@@ -136,7 +133,6 @@ exports.getSellerOrders = async (req, res) => {
         WHERE oi.order_id = ?
       `, [order.id]);
 
-      // Map each item to include a full `product` object
       order.items = items.map((row) => ({
         quantity: row.quantity,
         price: row.price,
@@ -174,6 +170,20 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     await db.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
     res.json({ msg: 'Order status updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// ========== DELETE ORDER (for buyer cancellation) ==========
+exports.deleteOrder = async (req, res) => {
+  if (req.user.role !== 'buyer') return res.status(403).json({ msg: 'Access denied' });
+  try {
+    // Only allow deletion if status is 'Processing' (optional)
+    await db.query('DELETE FROM orders WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
+    // Order items are deleted via CASCADE
+    res.json({ msg: 'Order cancelled' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
