@@ -470,8 +470,9 @@ const AppContent = () => {
   const cartQuantitiesMap = cartItems.reduce<{ [id: string]: number }>((acc, item) => { acc[item.product.id] = item.quantity; return acc; }, {});
 
   // ========== FRAME ANIMATIONS (with error handling) ==========
-  const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 10);
-  const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 10);
+  // Reduced FPS for smoother mobile experience
+  const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 5);
+  const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 5);
   const phoneRefObj = useFrameAnimationRef("phone_frames", 161, 10);
 
   // ========== SELLER'S OWN PRODUCTS ==========
