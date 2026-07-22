@@ -11,6 +11,8 @@ import { VendorPortal } from "./components/VendorPortal";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Blog } from "./pages/Blog";
+import { BlogPost } from "./pages/BlogPost";
 
 import { Product, CartItem, Order, Review, Coupon } from "./types";
 import { INITIAL_COUPONS } from "./data";
@@ -32,6 +34,52 @@ interface Address {
   phone: string;
   is_default: boolean;
 }
+
+// Blog posts data (shared with Blog & BlogPost)
+const blogPosts = [
+  {
+    id: 1,
+    title: "The Future of Wireless Audio",
+    excerpt: "How lossless Bluetooth and spatial audio are changing the way we listen.",
+    content: `
+      <p>Wireless audio has come a long way since the first Bluetooth headphones. Today, we're on the verge of a revolution in audio quality and spatial awareness.</p>
+      <p>With the introduction of lossless audio over Bluetooth, audiophiles can finally cut the cord without compromising sound quality. Companies like Apple, Sony, and Qualcomm are leading the charge with new codecs like LDAC and aptX Adaptive.</p>
+      <p>Spatial audio adds another dimension, creating an immersive soundstage that makes you feel like you're in a concert hall. This is achieved through advanced DSP algorithms and head-tracking.</p>
+      <p>In the next few years, we can expect wireless earbuds to rival high-end wired headphones, making premium audio accessible to everyone.</p>
+    `,
+    date: "July 8, 2026",
+    author: "Alex Rivera",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 2,
+    title: "Why Silicon Notebooks Are Dominating 2026",
+    excerpt: "Ultra‑thin, fanless, and incredibly powerful – the new standard in portable computing.",
+    content: `
+      <p>Silicon-based laptops have taken the industry by storm. With Apple's M-series chips and Qualcomm's Snapdragon X series, the era of fanless, ultra‑thin, yet powerful laptops is here.</p>
+      <p>These chips offer exceptional performance per watt, allowing for all-day battery life without sacrificing speed. The integration of CPU, GPU, and neural engine on a single chip reduces latency and power consumption.</p>
+      <p>Software optimization is also key – native ARM applications are now mainstream, and even legacy x86 apps run smoothly via emulation.</p>
+      <p>By 2026, silicon notebooks are expected to outsell traditional x86 laptops by a wide margin, marking a significant shift in the computing landscape.</p>
+    `,
+    date: "July 2, 2026",
+    author: "Jessica Taylor",
+    image: "https://images.unsplash.com/photo-1496181130204-755241544e35?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 3,
+    title: "The Art of Mechanical Keyboards",
+    excerpt: "From tactile switches to custom keycaps – why enthusiasts are obsessed.",
+    content: `
+      <p>Mechanical keyboards have evolved from a niche hobby to a mainstream passion. The tactile feedback, customizability, and durability of mechanical switches appeal to both typists and gamers.</p>
+      <p>Switch types like Cherry MX, Gateron, and Kailh offer distinct feels – from clicky and tactile to smooth linear. Enthusiasts often build their own keyboards, choosing every component from the PCB to the keycaps.</p>
+      <p>The keycap market is a subculture in itself, with artisans creating custom designs from resin and metal. The result is a keyboard that is as much a piece of art as it is a tool.</p>
+      <p>As remote work continues, the demand for premium typing experiences is only growing, cementing the mechanical keyboard's place in modern culture.</p>
+    `,
+    date: "June 25, 2026",
+    author: "Nathan Drake",
+    image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&auto=format&fit=crop&q=80",
+  }
+];
 
 const RequireAuth = ({ children, redirectTo = "/login" }: { children: JSX.Element; redirectTo?: string }) => {
   const { user } = useAuth();
@@ -471,8 +519,8 @@ const AppContent = () => {
 
   // ========== FRAME ANIMATIONS (with error handling) ==========
   // Reduced FPS for smoother mobile experience
-  const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 8);
-  const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 8);
+  const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 5);
+  const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 5);
   const phoneRefObj = useFrameAnimationRef("phone_frames", 161, 10);
 
   // ========== SELLER'S OWN PRODUCTS ==========
@@ -546,12 +594,6 @@ const AppContent = () => {
     { q: "What is your return policy?", a: "We offer a 30‑day hassle‑free return policy." }
   ];
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const blogPosts = [
-    { title: "The Future of Wireless Audio", excerpt: "How lossless Bluetooth and spatial audio are changing the way we listen.", date: "July 8, 2026", author: "Alex Rivera", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop&q=80" },
-    { title: "Why Silicon Notebooks Are Dominating 2026", excerpt: "Ultra‑thin, fanless, and incredibly powerful – the new standard in portable computing.", date: "July 2, 2026", author: "Jessica Taylor", image: "https://images.unsplash.com/photo-1496181130204-755241544e35?w=400&auto=format&fit=crop&q=80" },
-    { title: "The Art of Mechanical Keyboards", excerpt: "From tactile switches to custom keycaps – why enthusiasts are obsessed.", date: "June 25, 2026", author: "Nathan Drake", image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&auto=format&fit=crop&q=80" }
-  ];
 
   return (
     <div className="relative min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 flex flex-col font-sans">
@@ -720,7 +762,7 @@ const AppContent = () => {
                 </motion.div>
               </div>
 
-              {/* SHOP OUR COLLECTION – CAROUSEL (responsive) */}
+              {/* SHOP OUR COLLECTION – CAROUSEL */}
               <motion.div
                 initial="hidden"
                 whileInView="visible"
@@ -960,7 +1002,7 @@ const AppContent = () => {
                 </div>
               </div>
 
-              {/* BLOG */}
+              {/* ========== BLOG SECTION (home page) ========== */}
               <div ref={blogRef} className="scroll-mt-20 w-full py-12 bg-white border border-stone-200">
                 <div className="max-w-5xl mx-auto px-4">
                   <motion.div
@@ -976,25 +1018,26 @@ const AppContent = () => {
                   </motion.div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {blogPosts.map((post, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                        viewport={{ once: false, amount: 0.2 }}
-                        transition={{ duration: 1.2, delay: idx * 0.15 }}
-                        whileHover={{ scale: 1.02, y: -5, transition: { duration: 0.3 } }}
-                        className="bg-white border border-stone-200 overflow-hidden group shadow-sm hover:shadow-lg transition-shadow duration-300"
-                      >
-                        <img src={post.image} alt={post.title} className="w-full h-40 object-cover group-hover:scale-105 transition duration-500" />
-                        <div className="p-4 space-y-2">
-                          <h3 className="font-display font-bold text-stone-900 text-sm hover:text-amber-600 cursor-pointer">{post.title}</h3>
-                          <p className="text-xs text-stone-500">{post.excerpt}</p>
-                          <div className="flex items-center gap-4 text-[10px] text-stone-400 font-mono">
-                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.date}</span>
-                            <span className="flex items-center gap-1"><User className="h-3 w-3" /> {post.author}</span>
+                      <Link to={`/blog/${post.id}`} key={post.id} className="block">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                          whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                          viewport={{ once: false, amount: 0.2 }}
+                          transition={{ duration: 1.2, delay: idx * 0.15 }}
+                          whileHover={{ scale: 1.02, y: -5, transition: { duration: 0.3 } }}
+                          className="bg-white border border-stone-200 overflow-hidden group shadow-sm hover:shadow-lg transition-shadow duration-300"
+                        >
+                          <img src={post.image} alt={post.title} className="w-full h-40 object-cover group-hover:scale-105 transition duration-500" />
+                          <div className="p-4 space-y-2">
+                            <h3 className="font-display font-bold text-stone-900 text-sm hover:text-amber-600 cursor-pointer">{post.title}</h3>
+                            <p className="text-xs text-stone-500">{post.excerpt}</p>
+                            <div className="flex items-center gap-4 text-[10px] text-stone-400 font-mono">
+                              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.date}</span>
+                              <span className="flex items-center gap-1"><User className="h-3 w-3" /> {post.author}</span>
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -1048,10 +1091,13 @@ const AppContent = () => {
           } />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          {/* Blog routes */}
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:id" element={<BlogPost />} />
         </Routes>
       </main>
 
-      {/* ========== FOOTER ========== */}
+      {/* FOOTER */}
       <footer className="bg-stone-950 border-t border-stone-800 pt-12 pb-6 text-stone-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-stone-800">
