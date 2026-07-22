@@ -39,12 +39,12 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header 
       id="app-header" 
-      className="sticky top-0 z-40 w-full border-b border-stone-700 bg-stone-800 shadow-lg transition-colors duration-200"
+      className="sticky top-0 z-40 w-full border-b border-stone-200 bg-stone-800 shadow-lg transition-colors duration-200"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           
-          {/* Logo – white text */}
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-1 cursor-pointer select-none shrink-0">
             <span className="font-serif text-2xl font-black italic tracking-tighter uppercase text-white">
               ELECTRA<span className="text-amber-400">.</span>
@@ -194,15 +194,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        {/* Categories Bar – dark with subtle border */}
+        {/* Categories Bar – now wraps on mobile */}
         {currentView === "buyer" && (
-          <div id="categories-bar" className="flex items-center overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none border-t border-stone-700 pt-3 gap-6">
+          <div id="categories-bar" className="flex flex-wrap items-center overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none border-t border-stone-700 pt-3 gap-2 sm:gap-6">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 id={`cat-${cat.toLowerCase()}`}
                 onClick={() => setCategory(cat)}
-                className={`text-[10px] font-bold uppercase tracking-widest pb-2 cursor-pointer transition-all border-b-2 ${
+                className={`text-[10px] font-bold uppercase tracking-widest pb-2 cursor-pointer transition-all border-b-2 whitespace-nowrap ${
                   currentCategory === cat
                     ? "border-amber-500 text-amber-400"
                     : "border-transparent text-stone-400 hover:text-white hover:border-stone-500"

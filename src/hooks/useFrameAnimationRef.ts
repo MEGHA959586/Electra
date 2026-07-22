@@ -5,10 +5,15 @@ export const useFrameAnimationRef = (folder: string, frameCount: number, fps: nu
   const frameIndex = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasError = useRef(false);
+  const staticSrc = `/${folder}/ezgif-frame-001.jpg`;
 
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     hasError.current = false;
+
+    if (ref.current) {
+      ref.current.src = staticSrc;
+    }
 
     const intervalTime = 1000 / fps;
     intervalRef.current = setInterval(() => {
@@ -24,13 +29,11 @@ export const useFrameAnimationRef = (folder: string, frameCount: number, fps: nu
     };
   }, [folder, frameCount, fps]);
 
-  // Handle image load errors – stop updates and show fallback
   const handleError = () => {
     hasError.current = true;
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (ref.current) {
-      // Fallback to a static image or hide
-      ref.current.style.display = 'none';
+      ref.current.src = staticSrc;
     }
   };
 
