@@ -6,16 +6,26 @@ let pool;
 let useFallback = false;
 
 try {
-  pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    decimalNumbers: true
-  });
+  // If DATABASE_URL is provided (Aiven full URI), use it
+  if (process.env.DATABASE_URL) {
+    pool = mysql.createPool(process.env.DATABASE_URL);
+  } else {
+    // Fallback to individual env vars (for local development)
+    pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: process.env.DB_PORT || 3306,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      decimalNumbers: true,
+      ssl: {
+        rejectUnauthorized: false   // Required for Aiven
+      }
+    });
+  }
 } catch (error) {
   useFallback = true;
 }
