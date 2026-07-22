@@ -21,7 +21,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// Routes
+// API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/cart', require('./routes/cart'));
@@ -30,7 +30,7 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/wishlist', require('./routes/wishlist'));
 app.use('/api/addresses', require('./routes/addresses'));
-
+// app.use('/api/payments', require('./routes/payment'));   // <-- commented out
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
