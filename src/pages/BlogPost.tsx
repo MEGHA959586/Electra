@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { motion, useAnimation } from "framer-motion";
-import { Calendar, User, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, User } from "lucide-react";
 
 const blogPosts = [
   {
@@ -48,62 +48,74 @@ const blogPosts = [
   }
 ];
 
-export const Blog: React.FC = () => {
+export const BlogPost: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const post = blogPosts.find(p => p.id === Number(id));
   const controls = useAnimation();
 
   useEffect(() => {
     controls.start("visible");
-  }, [controls]);
+    window.scrollTo(0, 0);
+  }, [controls, id]);
+
+  if (!post) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-stone-900">Post not found</h2>
+          <Link to="/blog" className="text-amber-600 hover:underline mt-4 block">Back to blog</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 mb-8 transition">
+      <div className="max-w-3xl mx-auto">
+        <Link to="/blog" className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 mb-8 transition">
           <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm font-medium">Back to Home</span>
+          <span className="text-sm font-medium">Back to all posts</span>
         </Link>
 
+        {/* Hero Image */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-12"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7 }}
+          className="relative h-64 md:h-96 overflow-hidden rounded-none"
         >
-          <h1 className="font-serif text-4xl md:text-5xl font-light text-stone-950">Stories & Insights</h1>
-          <p className="text-stone-500 mt-2">Explore our latest articles on technology and innovation.</p>
-          <div className="h-0.5 w-16 bg-amber-600 mt-2"></div>
+          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-900/60 to-transparent"></div>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {blogPosts.map((post, index) => (
+        {/* Title & Meta */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-8"
+        >
+          <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-light text-stone-950 leading-tight">
+            {post.title}
+          </h1>
+          <div className="flex items-center gap-4 mt-4 text-sm text-stone-500 font-mono">
+            <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {post.date}</span>
+            <span className="flex items-center gap-1"><User className="h-4 w-4" /> {post.author}</span>
+          </div>
+        </motion.div>
+
+        {/* Content with scroll animations */}
+        <div className="mt-8 prose prose-stone max-w-none">
+          {post.content.split('\n').map((paragraph, index) => (
             <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.15 }}
-              whileHover={{ y: -8, transition: { duration: 0.2 } }}
-              className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300"
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+              className="mb-4"
             >
-              <Link to={`/blog/${post.id}`} className="block">
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-                </div>
-                <div className="p-6">
-                  <h3 className="font-display font-bold text-stone-900 text-lg hover:text-amber-600 transition-colors">
-                    {post.title}
-                  </h3>
-                  <p className="text-stone-500 text-sm mt-2 leading-relaxed">{post.excerpt}</p>
-                  <div className="flex items-center gap-4 mt-4 text-xs text-stone-400 font-mono">
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.date}</span>
-                    <span className="flex items-center gap-1"><User className="h-3 w-3" /> {post.author}</span>
-                  </div>
-                </div>
-              </Link>
+              <p className="text-stone-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: paragraph }} />
             </motion.div>
           ))}
         </div>
