@@ -43,7 +43,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full h-full object-cover mix-blend-multiply p-3 transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
           {product.stock <= 3 && product.stock > 0 && (
             <span className="px-1.5 py-0.5 bg-amber-500 text-white font-bold text-[7px] uppercase tracking-wider border border-black/5 shadow-sm">
@@ -67,7 +66,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        {/* Favorite Heart Button */}
         <button
           id={`wishlist-toggle-${product.id}`}
           onClick={(e) => {

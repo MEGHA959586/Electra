@@ -1,26 +1,38 @@
 import { useEffect, useRef } from 'react';
 
-/**
- * A DOM‑based frame animation hook – updates image src directly without React re‑renders.
- * This is the recommended version for performance.
- */
 export const useFrameAnimationRef = (folder: string, frameCount: number, fps: number = 24) => {
   const ref = useRef<HTMLImageElement>(null);
   const frameIndex = useRef(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasError = useRef(false);
 
   useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    hasError.current = false;
+
     const intervalTime = 1000 / fps;
-    const interval = setInterval(() => {
-      if (ref.current) {
+    intervalRef.current = setInterval(() => {
+      if (ref.current && !hasError.current) {
         frameIndex.current = (frameIndex.current + 1) % frameCount;
         const padded = String(frameIndex.current + 1).padStart(3, '0');
-        // Build the path directly using the folder prop
         ref.current.src = `/${folder}/ezgif-frame-${padded}.jpg`;
       }
     }, intervalTime);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [folder, frameCount, fps]);
 
-  return ref;
+  // Handle image load errors – stop updates and show fallback
+  const handleError = () => {
+    hasError.current = true;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (ref.current) {
+      // Fallback to a static image or hide
+      ref.current.style.display = 'none';
+    }
+  };
+
+  return { ref, onError: handleError };
 };
