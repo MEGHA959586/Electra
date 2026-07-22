@@ -519,8 +519,8 @@ const AppContent = () => {
 
   // ========== FRAME ANIMATIONS (with error handling) ==========
   // Reduced FPS for smoother mobile experience
-  const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 5);
-  const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 5);
+  const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 8);
+  const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 8);
   const phoneRefObj = useFrameAnimationRef("phone_frames", 161, 10);
 
   // ========== SELLER'S OWN PRODUCTS ==========
