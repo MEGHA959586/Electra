@@ -913,7 +913,7 @@ const AppContent = () => {
                         className="flex items-start gap-3"
                       >
                         <MapPin className="h-5 w-5 text-amber-600 mt-0.5" />
-                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Address</h4><p className="text-sm text-stone-600">123 Silicon Boulevard, Suite 100<br />San Francisco, CA 94107</p></div>
+                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Address</h4><p className="text-sm text-stone-600">Tirupati, Andhra Pradesh<br />India</p></div>
                       </motion.div>
                       <motion.div
                         variants={{
