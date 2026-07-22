@@ -518,7 +518,6 @@ const AppContent = () => {
   const cartQuantitiesMap = cartItems.reduce<{ [id: string]: number }>((acc, item) => { acc[item.product.id] = item.quantity; return acc; }, {});
 
   // ========== FRAME ANIMATIONS (with error handling) ==========
-  // Reduced FPS for smoother mobile experience
   const laptopRefObj = useFrameAnimationRef("laptop_10fps", 80, 10);
   const airpodsRefObj = useFrameAnimationRef("airpod_10fps", 80, 10);
   const phoneRefObj = useFrameAnimationRef("phone_frames", 161, 10);
@@ -913,7 +912,13 @@ const AppContent = () => {
                         className="flex items-start gap-3"
                       >
                         <MapPin className="h-5 w-5 text-amber-600 mt-0.5" />
-                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Address</h4><p className="text-sm text-stone-600">Tirupati, Andhra Pradesh<br />India</p></div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Address</h4>
+                          <p className="text-sm text-stone-600">
+                            VIT Vellore, Katpadi<br />
+                            Vellore, Tamil Nadu 632014
+                          </p>
+                        </div>
                       </motion.div>
                       <motion.div
                         variants={{
@@ -923,7 +928,10 @@ const AppContent = () => {
                         className="flex items-start gap-3"
                       >
                         <Phone className="h-5 w-5 text-amber-600 mt-0.5" />
-                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Phone</h4><p className="text-sm text-stone-600">+1 (555) 019-2834</p></div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Phone</h4>
+                          <p className="text-sm text-stone-600">+91 98765 43210</p>
+                        </div>
                       </motion.div>
                       <motion.div
                         variants={{
@@ -933,7 +941,10 @@ const AppContent = () => {
                         className="flex items-start gap-3"
                       >
                         <Mail className="h-5 w-5 text-amber-600 mt-0.5" />
-                        <div><h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Email</h4><p className="text-sm text-stone-600">support@electra.com</p></div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">Email</h4>
+                          <p className="text-sm text-stone-600">support@electra.com</p>
+                        </div>
                       </motion.div>
                     </motion.div>
 
