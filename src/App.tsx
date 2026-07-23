@@ -19,7 +19,7 @@ import { INITIAL_COUPONS } from "./data";
 import api from "./services/api";
 import {
   Filter, ArrowRight, Truck, RefreshCw, ShieldCheck, CreditCard,
-  Facebook, Twitter, Instagram, Youtube, Send, Mail, Phone, MapPin, Calendar, User, ChevronDown, ChevronUp
+  Facebook, Twitter, Instagram, Youtube, Send, Mail, Phone, MapPin, Calendar, User, ChevronDown, ChevronUp, X
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useFrameAnimationRef } from "./hooks/useFrameAnimationRef";
@@ -109,6 +109,9 @@ const AppContent = () => {
   const [orders, setOrders] = useState<Order[]>(() => JSON.parse(localStorage.getItem("em_orders") || "[]"));
   const [sellerOrders, setSellerOrders] = useState<Order[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
+
+  // Mobile filter modal state
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -528,21 +531,26 @@ const AppContent = () => {
   // ========== CATALOG CONTENT ==========
   const CatalogContent = () => (
     <div className="flex flex-col lg:flex-row gap-8">
-      <SidebarFilters
-        brands={availableBrands}
-        selectedBrand={selectedBrand}
-        setSelectedBrand={setSelectedBrand}
-        priceRange={priceRange}
-        setPriceRange={setPriceRange}
-        minRating={minRating}
-        setMinRating={setMinRating}
-        onlyInStock={onlyInStock}
-        setOnlyInStock={setOnlyInStock}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        clearFilters={handleClearFilters}
-        maxPriceLimit={maxPriceLimit}
-      />
+      {/* Desktop sidebar – hidden on mobile */}
+      <div className="hidden lg:block">
+        <SidebarFilters
+          brands={availableBrands}
+          selectedBrand={selectedBrand}
+          setSelectedBrand={setSelectedBrand}
+          priceRange={priceRange}
+          setPriceRange={setPriceRange}
+          minRating={minRating}
+          setMinRating={setMinRating}
+          onlyInStock={onlyInStock}
+          setOnlyInStock={setOnlyInStock}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          clearFilters={handleClearFilters}
+          maxPriceLimit={maxPriceLimit}
+        />
+      </div>
+
+      {/* Products area */}
       <div className="flex-1 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -553,8 +561,16 @@ const AppContent = () => {
               Showing {sortedProducts.length} premium electronic products matching criteria.
             </p>
           </div>
-          {onlyInStock && <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full">In Stock Only</span>}
+          {/* Mobile filter button */}
+          <button
+            onClick={() => setIsFilterModalOpen(true)}
+            className="lg:hidden flex items-center gap-1.5 px-4 py-2 border border-stone-200 bg-white text-stone-700 text-[10px] font-bold uppercase tracking-widest hover:bg-stone-50 transition"
+          >
+            <Filter className="h-4 w-4" />
+            <span>Filters</span>
+          </button>
         </div>
+
         {loading ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-stone-200 shadow-sm max-w-lg mx-auto">
             <p className="font-bold text-stone-900 text-sm">Loading products...</p>
@@ -566,13 +582,13 @@ const AppContent = () => {
             <button onClick={handleClearFilters} className="mt-4 px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-semibold hover:bg-stone-800">Reset Filters</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedProducts.map(p => (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {sortedProducts.map((p) => (
               <ProductCard
                 key={p.id}
                 product={p}
                 onViewDetails={(prod) => navigate(`/product/${prod.id}`)}
-                isWishlisted={wishlist.some(w => w.id === p.id)}
+                isWishlisted={wishlist.some((w) => w.id === p.id)}
                 onToggleWishlist={handleToggleWishlist}
                 onAddToCart={(product) => handleAddToCart(product, 1)}
                 cartQuantity={cartQuantitiesMap[p.id] || 0}
@@ -581,6 +597,50 @@ const AppContent = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile filter modal (drawer from bottom) */}
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setIsFilterModalOpen(false)} />
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="relative w-full max-h-[90vh] bg-white rounded-t-2xl shadow-2xl overflow-y-auto p-5 pb-8"
+          >
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+              <h3 className="font-display font-bold text-stone-950 text-sm uppercase tracking-wider">Filters</h3>
+              <button onClick={() => setIsFilterModalOpen(false)} className="p-1 text-stone-400 hover:text-stone-900">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-4">
+              <SidebarFilters
+                brands={availableBrands}
+                selectedBrand={selectedBrand}
+                setSelectedBrand={setSelectedBrand}
+                priceRange={priceRange}
+                setPriceRange={setPriceRange}
+                minRating={minRating}
+                setMinRating={setMinRating}
+                onlyInStock={onlyInStock}
+                setOnlyInStock={setOnlyInStock}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                clearFilters={handleClearFilters}
+                maxPriceLimit={maxPriceLimit}
+              />
+            </div>
+            <button
+              onClick={() => setIsFilterModalOpen(false)}
+              className="mt-6 w-full bg-stone-900 text-white py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-900 transition"
+            >
+              Apply Filters
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 
