@@ -657,6 +657,7 @@ const AppContent = () => {
   return (
     <div className="relative min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 flex flex-col font-sans">
       <div className="absolute inset-0 -z-10 pointer-events-none bg-stone-50" />
+      
       <Header
         currentCategory={selectedCategory}
         setCategory={setCategory}
@@ -667,10 +668,19 @@ const AppContent = () => {
         currentView={currentView}
         setView={setView}
       />
+
       <main className="flex-1">
         <Routes>
           <Route path="/" element={
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+              
+              {/* ========== MARQUEE / TICKER ========== */}
+              <div className="overflow-hidden whitespace-nowrap bg-amber-50 border-y border-amber-200 py-2.5 text-sm font-medium text-stone-800">
+                <div className="inline-block animate-marquee">
+                  ⚡ New Arrivals Weekly &nbsp;·&nbsp; Free Shipping on Orders Over $50 &nbsp;·&nbsp; 1‑Year Warranty &nbsp;·&nbsp; Explore Audio, Laptops, Wearables &amp; Mobile
+                </div>
+              </div>
+
               {/* HERO */}
               <div className="relative w-full border border-stone-200 bg-white/40 rounded-none overflow-hidden shadow-none">
                 <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
